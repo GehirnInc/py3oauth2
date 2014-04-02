@@ -4,7 +4,7 @@ setup(
     name='py3oauth2',
     version='0.0.1',
     author='Kohei YOSHIDA',
-    author_email='kohei@yosida95.com',
+    author_email='kohei.yoshida@gehirn.co.jp',
     packages=['py3oauth2'],
     scripts=[],
     url='https://github.com/GehirnInc/py3oauth2',

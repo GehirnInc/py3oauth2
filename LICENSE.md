@@ -1,5 +1,5 @@
 The MIT License (MIT)
-Copyright © 2014 Kohei YOSHIDA &lt;[license@yosida95.com](mailto:kohei.yoshida@gehirn.co.jp)&gt;
+Copyright © 2014 Kohei YOSHIDA &lt;[kohei.yoshida@gehirn.co.jp](mailto:kohei.yoshida@gehirn.co.jp)&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
