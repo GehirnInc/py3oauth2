@@ -16,7 +16,7 @@ class IStore:
         raise NotImplementedError
 
     def persist_refresh_token(self, client, access_token):
-        pass
+        raise NotImplementedError
 
     def discard_refresh_token(self, client, refresh_token):
         raise NotImplementedError

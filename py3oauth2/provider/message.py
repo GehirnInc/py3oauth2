@@ -5,12 +5,10 @@ class Value:
 
     def __init__(self, param, value):
         assert isinstance(param, Parameter)
-        assert isinstance(value, param.type)
 
         self.type = param.type
         self.required = param.required
         self.recommended = param.recommended
-
         self.__set__(self, value)
 
     def __get__(self, inst, owner):
