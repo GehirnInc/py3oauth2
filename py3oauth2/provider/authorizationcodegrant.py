@@ -3,11 +3,13 @@
 from . import message
 
 
+def is_state_required(self):
+    return hasattr(self.request, 'state') and self.request.state is not None
+
+
 class AuthorizationResponse(message.Response):
     code = message.Parameter(str, required=True)
-    state = message.Parameter(
-        str,
-        required=lambda self: 'state' in self.request and self.request.state)
+    state = message.Parameter(str, required=is_state_required)
 
     @classmethod
     def from_request(cls, request, code):
@@ -22,11 +24,6 @@ class AuthorizationResponse(message.Response):
 
 
 class AuthorizationErrorResponse(message.Response):
-
-    def is_state_required(self):
-        return hasattr(self.request, 'state')\
-            and self.request.state is not None
-
     error = message.Parameter(str, required=True)
     error_descritpion = message.Parameter(str)
     error_uri = message.Parameter(str)
