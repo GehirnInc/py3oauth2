@@ -5,18 +5,32 @@ from . import message
 
 class AuthorizationResponse(message.Response):
     code = message.Parameter(str, required=True)
-    scope = message.Parameter(
-        str,
-        required=lambda self: 'scope' in self.request and self.request.scope)
-
-
-class AuthorizationErrorResponse(message.Response):
-    error = message.Parameter(str, required=True)
-    error_descritpion = message.Parameter(str)
-    error_uri = message.Parameter(str)
     state = message.Parameter(
         str,
         required=lambda self: 'state' in self.request and self.request.state)
+
+    @classmethod
+    def from_request(cls, request, code):
+        inst = cls()
+        inst.code = code.get_code()
+
+        if not hasattr(request, 'state') or request.state is None:
+            return inst
+
+        inst.state = request.state
+        return inst
+
+
+class AuthorizationErrorResponse(message.Response):
+
+    def is_state_required(self):
+        return hasattr(self.request, 'state')\
+            and self.request.state is not None
+
+    error = message.Parameter(str, required=True)
+    error_descritpion = message.Parameter(str)
+    error_uri = message.Parameter(str)
+    state = message.Parameter(str, required=is_state_required)
 
 
 class AuthorizationRequest(message.Request):
@@ -28,6 +42,14 @@ class AuthorizationRequest(message.Request):
     redirect_uri = message.Parameter(str)
     scope = message.Parameter(str)
     state = message.Parameter(str)
+
+    @classmethod
+    def from_dict(cls, D):
+        inst = cls()
+        for k, v in D.items():
+            setattr(inst, k, v)
+
+        return inst
 
 
 class AccessTokenRequest(message.Request):
