@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import json
+
 
 class Value:
 
@@ -69,18 +71,22 @@ class Message(dict, metaclass=MessageMeta):
         return value
 
     def __str__(self):
-        return self.to_dict().__str__()
+        return self._to_dict().__str__()
 
     def __repr__(self):
         return self.__str__()
 
-    def to_dict(self):
+    def _to_dict(self):
         dct = self.copy()
         dct.update((
             k, getattr(self, k)
         ) for k in self.__msg_params__.keys())
 
         return dct
+
+    def to_json(self):
+        dct = dict((k, v) for k, v in self._to_dict().items() if v is not None)
+        return json.dumps(dct)
 
     @classmethod
     def from_dict(cls, D):
