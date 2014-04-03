@@ -69,42 +69,39 @@ class Message(dict, metaclass=MessageMeta):
         return value
 
     def __str__(self):
-        dct = self.copy()
-        dct.update((
-            k, getattr(self, k)
-        ) for k in self.__msg_params__.keys())
-        return dct.__str__()
+        return self.to_dict().__str__()
 
     def __repr__(self):
         return self.__str__()
 
+    def to_dict(self):
+        dct = self.copy()
+        dct.update((
+            k, getattr(self, k)
+        ) for k in self.__msg_params__.keys())
 
-class Request(Message):
+        return dct
 
-    def validate(self):
-        raise NotImplementedError
+    @classmethod
+    def from_dict(cls, D):
+        inst = cls()
+        for k, v in D.items():
+            if hasattr(inst, k):
+                setattr(inst, k, v)
+            else:
+                inst[k] = v
 
-    def to_json(self):
-        pass
-
-
-class Response(Message):
-
-    def validate(self):
-        raise NotImplementedError
-
-    def to_json(self):
-        pass
+        return inst
 
 
-class RefreshTokenRequest(Request):
+class RefreshTokenRequest(Message):
 
     grant_type = Parameter(str, required=True)
     refresh_token = Parameter(str, required=True)
     scope = Parameter(str)
 
 
-class AccessTokenResponse(Response):
+class AccessTokenResponse(Message):
     access_token = Parameter(str, required=True)
     token_type = Parameter(str, required=True)
     expires_in = Parameter(int, recommended=True)
@@ -112,7 +109,7 @@ class AccessTokenResponse(Response):
     scope = Parameter(str)
 
 
-class ErrorResponse(Response):
+class ErrorResponse(Message):
 
     error = Parameter(str, required=True)
     error_descritpion = Parameter(str)

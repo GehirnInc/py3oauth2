@@ -7,7 +7,7 @@ def is_state_required(self):
     return hasattr(self.request, 'state') and self.request.state is not None
 
 
-class AuthorizationResponse(message.Response):
+class AuthorizationResponse(message.Message):
     code = message.Parameter(str, required=True)
     state = message.Parameter(str, required=is_state_required)
 
@@ -23,14 +23,14 @@ class AuthorizationResponse(message.Response):
         return inst
 
 
-class AuthorizationErrorResponse(message.Response):
+class AuthorizationErrorResponse(message.Message):
     error = message.Parameter(str, required=True)
     error_descritpion = message.Parameter(str)
     error_uri = message.Parameter(str)
     state = message.Parameter(str, required=is_state_required)
 
 
-class AuthorizationRequest(message.Request):
+class AuthorizationRequest(message.Message):
     response = AuthorizationResponse
     err_response = AuthorizationErrorResponse
 
@@ -40,16 +40,8 @@ class AuthorizationRequest(message.Request):
     scope = message.Parameter(str)
     state = message.Parameter(str)
 
-    @classmethod
-    def from_dict(cls, D):
-        inst = cls()
-        for k, v in D.items():
-            setattr(inst, k, v)
 
-        return inst
-
-
-class AccessTokenRequest(message.Request):
+class AccessTokenRequest(message.Message):
     response = message.AccessTokenResponse
     err_response = message.ErrorResponse
 

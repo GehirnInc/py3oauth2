@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from .message import (
+    Message,
     Parameter,
-    Response as BaseResponse,
-    Request as BaseRequest,
 )
 
 
@@ -11,7 +10,7 @@ def is_state_required(self):
     return hasattr(self.request, 'state') and self.request.state is not None
 
 
-class Response(BaseResponse):
+class Response(Message):
 
     access_token = Parameter(str, required=True)
     token_type = Parameter(str, required=True)
@@ -20,7 +19,7 @@ class Response(BaseResponse):
     state = Parameter(str, is_state_required)
 
 
-class ErrorResponse(BaseResponse):
+class ErrorResponse(Message):
 
     error = Parameter(str, required=True)
     error_descritpion = Parameter(str)
@@ -28,7 +27,7 @@ class ErrorResponse(BaseResponse):
     state = Parameter(str, is_state_required)
 
 
-class Request(BaseRequest):
+class Request(Message):
     response = Response
     err_response = ErrorResponse
 
