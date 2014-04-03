@@ -2,23 +2,26 @@
 
 import json
 
+from .exceptions import ValidationError
+
 
 class Value:
 
-    def __init__(self, param, value):
+    def __init__(self, param, name, value):
         assert isinstance(param, Parameter)
 
-        self.type = param.type
-        self.required = param.required
-        self.recommended = param.recommended
+        self.param = param
+        self.name = name
         self.__set__(self, value)
 
     def __get__(self, inst, owner):
         return self._value
 
     def __set__(self, inst, value):
-        if not (self.type is None or isinstance(value, self.type)):
-            raise ValueError()
+        if not (self.param.type is None or isinstance(value, self.param.type)):
+            raise ValidationError('%s must be an instance of %r' % (
+                self.name, self.param.type,
+            ))
 
         self._value = value
 
@@ -30,10 +33,18 @@ class Parameter:
         self.required = required
         self.recommended = recommended
 
-        self._value = None
+    def new(self, name, value):
+        return Value(self, name, value)
 
-    def new(self, value):
-        return Value(self, value)
+    def validate(self, owner, name, value):
+        if value is not None and not isinstance(value, self.type):
+            raise ValidationError('%s must be an instance of %r' % (
+                name, self.type,
+            ))
+
+        if callable(self.required) and self.required(owner) or self.required:
+            if value is None:
+                raise ValidationError('%s is required' % (name, ))
 
 
 class MessageMeta(type):
@@ -55,7 +66,7 @@ class Message(dict, metaclass=MessageMeta):
         else:
             if name in self.__msg_params__ and current is None:
                 super(Message, self).__setattr__(
-                    name, self.__msg_params__[name].new(value)
+                    name, self.__msg_params__[name].new(name, value)
                 )
                 return
 
@@ -88,6 +99,12 @@ class Message(dict, metaclass=MessageMeta):
         dct = dict((k, v) for k, v in self._to_dict().items() if v is not None)
         return json.dumps(dct)
 
+    def validate(self):
+        for name, param in self.__msg_params__.items():
+            param.validate(self, name, getattr(self, name))
+
+        return True
+
     @classmethod
     def from_dict(cls, D):
         inst = cls()
@@ -97,6 +114,7 @@ class Message(dict, metaclass=MessageMeta):
             else:
                 inst[k] = v
 
+        inst.validate()
         return inst
 
 

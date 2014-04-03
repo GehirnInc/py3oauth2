@@ -7,6 +7,7 @@ from . import (
     authorizationcodegrant,
     utils,
 )
+from .exceptions import ValidationError
 from .provider import AuthorizationProvider
 from .store import IStore
 
@@ -131,16 +132,11 @@ class TestAuthorizationCodeFlow(TestBase):
         self.assertEqual(resp.state, req.state)
 
     def test_authorization_code_missing_response_type(self):
-        req = authorizationcodegrant.AuthorizationRequest.from_dict({
-            'client_id': self.client.id,
-            'state': utils.generate_random_string(
-                20,
-                utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS),
-        })
+        state = utils.generate_random_string(
+            20, utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS)
 
-        provider = AuthorizationProvider(self.store)
-        resp = provider.issue_authorization_code(self.owner, req)
-
-        self.assertIsInstance(resp,
-                              authorizationcodegrant.AuthorizationErrorResponse)
-        self.assertEqual(resp.error, 'invalid_request')
+        with self.assertRaises(ValidationError):
+            authorizationcodegrant.AuthorizationRequest.from_dict({
+                'client_id': self.client.id,
+                'state': state
+            })

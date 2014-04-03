@@ -2,3 +2,6 @@
 
 
 DenyAuthentication = type('DenyAuthentication', (Exception, ), {})
+
+
+ValidationError = type('ValidationError', (ValueError, ), {})
