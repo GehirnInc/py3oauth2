@@ -140,3 +140,19 @@ class TestAuthorizationCodeFlow(TestBase):
                 'client_id': self.client.id,
                 'state': state
             })
+
+    def test_authorization_code_missing_state(self):
+        req = authorizationcodegrant.AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': self.client.id,
+            'state': utils.generate_random_string(
+                20,
+                utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS),
+        })
+
+        provider = AuthorizationProvider(self.store)
+        resp = provider.issue_authorization_code(self.owner, req)
+
+        del resp.state
+        with self.assertRaises(ValidationError):
+            resp.validate()
