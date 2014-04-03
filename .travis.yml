@@ -4,7 +4,8 @@ python:
     - '3.4'
 install:
     - pip install coveralls
+    - pip install -r requirements.txt
 script:
-    - nosetests -s  --verbosity=2 --with-coverage --cover-erase=true --cover-package=py3oauth2
+    - nosetests -s  --verbosity=2 --with-coverage --cover-erase --cover-package=py3oauth2
 after_success:
     - coveralls
