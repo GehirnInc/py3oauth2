@@ -7,7 +7,10 @@ from . import (
     authorizationcodegrant,
     utils,
 )
-from .exceptions import ValidationError
+from .exceptions import (
+    DenyAuthentication,
+    ValidationError
+)
 from .provider import AuthorizationProvider
 from .store import IStore
 
@@ -51,7 +54,7 @@ class MemoryStore(IStore):
         self.authorization_codes = {}
 
     def get_client(self, client_id):
-        return self.clients[client_id]
+        return self.clients.get(client_id)
 
     def persist_client(self, client):
         self.clients[client.id] = client
@@ -99,6 +102,53 @@ class TestBase(unittest.TestCase):
 
 
 class TestAuthorizationCodeFlow(TestBase):
+
+    def test_unauthorized_client(self):
+        req = authorizationcodegrant.AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': 'dummyclientid',
+        })
+
+        provider = AuthorizationProvider(self.store)
+        resp = provider.issue_authorization_code(self.owner, req)
+
+        self.assertIsInstance(
+            resp, authorizationcodegrant.AuthorizationErrorResponse,
+        )
+        self.assertEqual(resp.error, 'unauthorized_client')
+
+    def test_unsupported_response_type(self):
+        req = authorizationcodegrant.AuthorizationRequest.from_dict({
+            'response_type': 'unsupported',
+            'client_id': self.client.id,
+        })
+
+        provider = AuthorizationProvider(self.store)
+        resp = provider.issue_authorization_code(self.owner, req)
+
+        self.assertIsInstance(
+            resp, authorizationcodegrant.AuthorizationErrorResponse,
+        )
+        self.assertEqual(resp.error, 'unsupported_response_type')
+
+    def test_access_denied(self):
+        req = authorizationcodegrant.AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': self.client.id,
+        })
+
+        def persist_authorization_code(client, owner, code, scope):
+            raise DenyAuthentication
+        self.store.persist_authorization_code = persist_authorization_code
+
+        provider = AuthorizationProvider(self.store)
+        resp = provider.issue_authorization_code(self.owner, req)
+
+        self.assertIsInstance(
+            resp, authorizationcodegrant.AuthorizationErrorResponse,
+        )
+        self.assertEqual(resp.error, 'access_denied')
+
 
     def test_authorization_code(self):
         req = authorizationcodegrant.AuthorizationRequest.from_dict({
