@@ -118,14 +118,24 @@ class Message(dict, metaclass=MessageMeta):
         return inst
 
 
-class RefreshTokenRequest(Message):
+Request = type('Request', (Message, ), {})
+
+
+class Response(Message):
+
+    def __init__(self, request, *args, **kwargs):
+        super(Response, self).__init__(self, *args, **kwargs)
+        self.request = request
+
+
+class RefreshTokenRequest(Request):
 
     grant_type = Parameter(str, required=True)
     refresh_token = Parameter(str, required=True)
     scope = Parameter(str)
 
 
-class AccessTokenResponse(Message):
+class AccessTokenResponse(Response):
     access_token = Parameter(str, required=True)
     token_type = Parameter(str, required=True)
     expires_in = Parameter(int, recommended=True)
@@ -133,7 +143,7 @@ class AccessTokenResponse(Message):
     scope = Parameter(str)
 
 
-class ErrorResponse(Message):
+class ErrorResponse(Response):
 
     error = Parameter(str, required=True)
     error_descritpion = Parameter(str)

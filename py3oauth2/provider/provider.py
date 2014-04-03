@@ -21,21 +21,21 @@ class AuthorizationProvider:
             if client is None:
                 raise ValueError('get_client() returned None')
         except ValueError:
-            resp = request.err_response()
+            resp = request.err_response(request)
             resp.error = 'unauthorized_client'
             return resp
         except:
-            resp = request.err_response()
+            resp = request.err_response(request)
             resp.error = 'server_error'
             return resp
         else:
             if not hasattr(request, 'response_type')\
                     or request.response_type is None:
-                resp = request.err_response()
+                resp = request.err_response(request)
                 resp.error = 'invalid_request'
                 return resp
             elif request.response_type != 'code':
-                resp = request.err_response()
+                resp = request.err_response(request)
                 resp.error = 'unsupported_response_type'
                 return resp
 
@@ -45,7 +45,7 @@ class AuthorizationProvider:
                     client, owner, code, request.scope
                 )
             except DenyAuthentication:
-                resp = request.err_response()
+                resp = request.err_response(request)
                 resp.error = 'access_denied'
                 return resp
             else:
@@ -63,11 +63,11 @@ class AuthorizationProvider:
             if client is None:
                 raise ValueError('get_client() returned None')
         except ValueError:
-            resp = request.err_response()
+            resp = request.err_response(request)
             resp.error = 'unauthorized_client'
             return resp
         except:
-            resp = request.err_response()
+            resp = request.err_response(request)
             resp.error = 'server_error'
             return resp
         else:
@@ -82,25 +82,25 @@ class AuthorizationProvider:
                         self.store.discard_refresh_token(client,
                                                          request.refresh_token)
                     else:
-                        resp = request.err_response()
+                        resp = request.err_response(request)
                         resp.error = 'unsupported_grant_type'
                         return resp
                 except AttributeError:
-                    err = request.err_response()
+                    err = request.err_response(request)
                     err.error = 'invalid_request'
                     return err
                 except ValueError:
-                    err = request.err_response()
+                    err = request.err_response(request)
                     err.error = 'access_denied'
                     return err
             elif 'response' in request:
                 # implicit grant
                 if request.response != 'token':
-                    resp = request.err_response()
+                    resp = request.err_response(request)
                     resp.error = 'unsupported_response'
                     return resp
             else:
-                resp = request.err_response()
+                resp = request.err_response(request)
                 resp.error = 'invalid_request'
                 return
 
@@ -110,7 +110,7 @@ class AuthorizationProvider:
                 tokenobj = self.store.persist_access_token(
                     client, owner, token, expires_in)
             except DenyAuthentication:
-                resp = request.err_response()
+                resp = request.err_response(request)
                 resp.error = 'access_denied'
                 return resp
             else:
