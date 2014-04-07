@@ -18,33 +18,54 @@ class Value:
         return self._value
 
     def __set__(self, inst, value):
-        if not (self.param.type is None or isinstance(value, self.param.type)):
-            raise ValidationError('%s must be an instance of %r' % (
-                self.name, self.param.type,
-            ))
+        if self.param.type is None\
+                or isinstance(value, (self.param.type, type(None))):
+            self._value = value
+            return
 
-        self._value = value
+        raise ValidationError('%s must be an instance of %r' % (
+            self.name, self.param.type,
+        ))
 
 
 class Parameter:
 
-    def __init__(self, type, required=False, recommended=False):
+    def __init__(self, type, required=False, recommended=False, default=None):
+
         self.type = type
         self.required = required
         self.recommended = recommended
+        self.default = default
+
+        self._check_type(self, 'value of argument default', self.default)
+
+    def get_default(self):
+        return self.default
 
     def new(self, name, value):
         return Value(self, name, value)
 
-    def validate(self, owner, name, value):
-        if value is not None and not isinstance(value, self.type):
+    def validate(self, owner, name, value, required=True):
+        return all((
+            self._check_required(owner, name,  value),
+            self._check_type(owner, name, value)))
+
+    def _check_required(self, owner, name, value):
+        required =\
+            self.required(owner) if callable(self.required) else self.required
+        if value is None and required:
+            raise ValidationError('%s is required' % (name, ))
+
+        return True
+
+    def _check_type(self, owner, name, value):
+        if self.type is not None\
+                and not isinstance(value, (self.type, type(None))):
             raise ValidationError('%s must be an instance of %r' % (
                 name, self.type,
             ))
 
-        if callable(self.required) and self.required(owner) or self.required:
-            if value is None:
-                raise ValidationError('%s is required' % (name, ))
+        return True
 
 
 class MessageMeta(type):
@@ -58,19 +79,12 @@ class MessageMeta(type):
 
 class Message(dict, metaclass=MessageMeta):
 
-    def __setattr__(self, name, value):
-        try:
-            current = getattr(self, name)
-        except AttributeError:
-            super(Message, self).__setattr__(name, value)
-        else:
-            if name in self.__msg_params__ and current is None:
-                super(Message, self).__setattr__(
-                    name, self.__msg_params__[name].new(name, value)
-                )
-                return
+    def __new__(cls, *args, **kwargs):
+        inst = super(Message, cls).__new__(cls, *args, **kwargs)
+        for name, value in cls.__msg_params__.items():
+            setattr(inst, name, value.new(name, value.get_default()))
 
-            super(Message, self).__setattr__(name, value)
+        return inst
 
     def __getattribute__(self, name):
         value = super(Message, self).__getattribute__(name)
@@ -96,6 +110,8 @@ class Message(dict, metaclass=MessageMeta):
         return dct
 
     def to_json(self):
+        self.validate()
+
         dct = dict((k, v) for k, v in self._to_dict().items() if v is not None)
         return json.dumps(dct)
 
@@ -127,12 +143,17 @@ class Response(Message):
         super(Response, self).__init__(self, *args, **kwargs)
         self.request = request
 
+    @classmethod
+    def from_dict(cls, request, D):
+        inst = cls(request)
+        for k, v in D.items():
+            if hasattr(inst, k):
+                setattr(inst, k, v)
+            else:
+                inst[k] = v
 
-class RefreshTokenRequest(Request):
-
-    grant_type = Parameter(str, required=True)
-    refresh_token = Parameter(str, required=True)
-    scope = Parameter(str)
+        inst.validate()
+        return inst
 
 
 class AccessTokenResponse(Response):
@@ -142,9 +163,31 @@ class AccessTokenResponse(Response):
     refresh_token = Parameter(str)
     scope = Parameter(str)
 
+    @classmethod
+    def from_request(cls, request, token):
+        D = {
+            'access_token': token.get_token(),
+            'token_type': token.get_type(),
+            'expires_in': token.get_expires_in(),
+            'refresh_token': token.get_refresh_token(),
+        }
+        if hasattr(request, 'scope') and request.scope != token.get_scope():
+            D['scope'] = token.get_scope()
+
+        return cls.from_dict(request, D)
+
 
 class ErrorResponse(Response):
 
     error = Parameter(str, required=True)
     error_descritpion = Parameter(str)
     error_uri = Parameter(str)
+
+
+class RefreshTokenRequest(Request):
+    response = AccessTokenResponse
+    err_response = ErrorResponse
+
+    grant_type = Parameter(str, required=True)
+    refresh_token = Parameter(str, required=True)
+    scope = Parameter(str)
