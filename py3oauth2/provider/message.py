@@ -88,9 +88,7 @@ class Message(dict, metaclass=MessageMeta):
 
     def __getattribute__(self, name):
         value = super(Message, self).__getattribute__(name)
-        if isinstance(value, Parameter):
-            return None
-        elif hasattr(value, '__get__'):
+        if hasattr(value, '__get__'):
             return value.__get__(None, self)
 
         return value
