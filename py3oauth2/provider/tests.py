@@ -5,6 +5,7 @@ import uuid
 
 from . import (
     authorizationcodegrant,
+    message,
     utils,
 )
 from .exceptions import (
@@ -103,6 +104,33 @@ class TestBase(unittest.TestCase):
 
 class TestAuthorizationCodeFlow(TestBase):
 
+    def test_server_error(self):
+        req = authorizationcodegrant.AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': self.client.id,
+        })
+
+        def get_client(client_id):
+            raise Exception()
+        self.store.get_client = get_client
+
+        provider = AuthorizationProvider(self.store)
+        resp = provider.issue_authorization_code(self.owner, req)
+
+        self.assertEqual(resp.error, 'server_error')
+
+    def test_invalid_request(self):
+        req = authorizationcodegrant.AccessTokenRequest.from_dict({
+            'client_id': self.client.id,
+            'grant_type': 'authorization_code',
+            'code': 'dummycode',
+        })
+
+        provider = AuthorizationProvider(self.store)
+        resp = provider.issue_authorization_code(self.owner, req)
+
+        self.assertEqual(resp.error, 'invalid_request')
+
     def test_unauthorized_client(self):
         req = authorizationcodegrant.AuthorizationRequest.from_dict({
             'response_type': 'code',
@@ -112,9 +140,6 @@ class TestAuthorizationCodeFlow(TestBase):
         provider = AuthorizationProvider(self.store)
         resp = provider.issue_authorization_code(self.owner, req)
 
-        self.assertIsInstance(
-            resp, authorizationcodegrant.AuthorizationErrorResponse,
-        )
         self.assertEqual(resp.error, 'unauthorized_client')
 
     def test_unsupported_response_type(self):
@@ -126,9 +151,6 @@ class TestAuthorizationCodeFlow(TestBase):
         provider = AuthorizationProvider(self.store)
         resp = provider.issue_authorization_code(self.owner, req)
 
-        self.assertIsInstance(
-            resp, authorizationcodegrant.AuthorizationErrorResponse,
-        )
         self.assertEqual(resp.error, 'unsupported_response_type')
 
     def test_access_denied(self):
@@ -144,11 +166,7 @@ class TestAuthorizationCodeFlow(TestBase):
         provider = AuthorizationProvider(self.store)
         resp = provider.issue_authorization_code(self.owner, req)
 
-        self.assertIsInstance(
-            resp, authorizationcodegrant.AuthorizationErrorResponse,
-        )
         self.assertEqual(resp.error, 'access_denied')
-
 
     def test_authorization_code(self):
         req = authorizationcodegrant.AuthorizationRequest.from_dict({
@@ -159,8 +177,6 @@ class TestAuthorizationCodeFlow(TestBase):
         provider = AuthorizationProvider(self.store)
         resp = provider.issue_authorization_code(self.owner, req)
 
-        self.assertIsInstance(resp,
-                              authorizationcodegrant.AuthorizationResponse)
         self.assertIsInstance(resp.code, str)
         self.assertFalse('state' in resp)
 
@@ -176,8 +192,6 @@ class TestAuthorizationCodeFlow(TestBase):
         provider = AuthorizationProvider(self.store)
         resp = provider.issue_authorization_code(self.owner, req)
 
-        self.assertIsInstance(resp,
-                              authorizationcodegrant.AuthorizationResponse)
         self.assertIsInstance(resp.code, str)
         self.assertEqual(resp.state, req.state)
 
