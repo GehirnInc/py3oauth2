@@ -2,6 +2,8 @@
 
 from . import message
 
+__all__ = ['Response', 'ErrorResponse', 'Request']
+
 
 def is_state_required(self):
     return hasattr(self.request, 'state') and self.request.state is not None
@@ -14,21 +16,6 @@ class Response(message.Response):
     expires_in = message.Parameter(int)
     scope = message.Parameter(str)
     state = message.Parameter(str, is_state_required)
-
-    @classmethod
-    def from_request(cls, request, token):
-        D = {
-            'access_token': token.get_token(),
-            'token_type': token.get_type(),
-            'expires_in': token.get_expires_in(),
-        }
-        if hasattr(request, 'scope') and request.scope != token.get_scope():
-            D['scope'] = token.get_scope()
-
-        if hasattr(request, 'state') and request.state is not None:
-            D['state'] = request.state
-
-        return cls.from_dict(request, D)
 
 
 class ErrorResponse(message.Response):
@@ -43,8 +30,36 @@ class Request(message.Request):
     response = Response
     err_response = ErrorResponse
 
-    response_type = message.Parameter(str, required=True)
+    response_type = message.Parameter(str, required=True,
+                                      default='token', editable=False)
     client_id = message.Parameter(str, required=True)
     redirect_uri = message.Parameter(str)
     scope = message.Parameter(str)
     state = message.Parameter(str, recommended=True)
+
+    def answer(self, provider, owner):
+        try:
+            try:
+                client = provider.store.get_client(self.client_id)
+                if client is None or provider.validate_client(client):
+                    raise message.UnauthorizedClient
+
+                token = provider.store.persist_access_token(
+                    client, owner, provider.generate_access_token(),
+                    self.scope)
+            except message.RequestError:
+                raise
+            except:
+                raise message.ServerError()
+        except message.RequestError as why:
+            resp = self.err_response(self)
+            resp.error = why.kind
+            return resp
+        else:
+            return self.response.from_dict(self, {
+                'access_token': token.get_token(),
+                'token_type': token.get_type(),
+                'expires_in': token.get_expires_in(),
+                'scope': token.get_scope(),
+                'state': self.state,
+            })
