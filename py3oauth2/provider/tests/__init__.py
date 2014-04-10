@@ -6,6 +6,8 @@ from ..interfaces import (
     IClient,
     IStore,
 )
+from ..message import UnauthorizedClient
+from ..provider import AuthorizationProvider
 
 
 class Owner:
@@ -102,6 +104,9 @@ class Store(IStore):
     def discard_access_token(self, token):
         del self.access_tokens[token.get_token()]
 
+    def get_access_token(self, token):
+        return self.access_tokens.get(token)
+
     def get_access_token_length(self):
         return 40
 
@@ -118,3 +123,21 @@ class Store(IStore):
 
     def get_authorization_code_length(self):
         return 40
+
+
+class BlindAuthorizationProvider(AuthorizationProvider):
+
+    def authorize_client(self, client):
+        return True
+
+
+class BrokenAuthorizationProvider(AuthorizationProvider):
+
+    def authorize_client(self, client):
+        raise RuntimeError
+
+
+class DummyAuthorizationProvider(AuthorizationProvider):
+
+    def authorize_client(self, client):
+        raise UnauthorizedClient

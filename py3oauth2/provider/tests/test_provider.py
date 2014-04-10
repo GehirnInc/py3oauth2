@@ -9,18 +9,12 @@ from .. import (
     authorizationcodegrant,
     message,
 )
-from ..provider import AuthorizationProvider
 from . import (
+    BlindAuthorizationProvider,
     Client,
     Owner,
     Store,
 )
-
-
-class BlindAuthorizationProvider(AuthorizationProvider):
-
-    def authorize_client(self, client):
-        return True
 
 
 class TestAuthorizationProvider(unittest.TestCase):
@@ -53,7 +47,7 @@ class TestAuthorizationProvider(unittest.TestCase):
         prereq = {
             'response_type': 'code',
             'client_id': self.client.get_id(),
-            'state': ''.join(random.choice(pool))
+            'state': ''.join(random.choice(pool) for _ in range(40))
         }
 
         preresp = self.provider.handle_request(prereq)
@@ -92,7 +86,7 @@ class TestAuthorizationProvider(unittest.TestCase):
 
         resp = self.provider.handle_request(req)
         self.assertIsInstance(resp.request,
-                         authorizationcodegrant.AuthorizationRequest)
+                              authorizationcodegrant.AuthorizationRequest)
         self.assertIsInstance(
             resp,
             authorizationcodegrant.AuthorizationRequest.err_response)

@@ -63,6 +63,9 @@ class IStore:
     def discard_access_token(self, token):
         raise NotImplementedError
 
+    def get_access_token(self, token):
+        raise NotImplementedError
+
     def get_access_token_length(self):
         raise NotImplementedError
 

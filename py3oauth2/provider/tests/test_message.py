@@ -175,3 +175,31 @@ class TestMessage(unittest.TestCase):
             inst = self.msg.from_dict({
                 'foo': 'value',
             })
+
+
+class TestRequestErrorMeta(unittest.TestCase):
+
+    @property
+    def target_class(self):
+        from ..message import RequestErrorMeta
+        return RequestErrorMeta
+
+    def test_it(self):
+        from ..message import (
+            Parameter,
+            RequestError,
+        )
+
+        self.target_class('cls', object, {})
+
+        with self.assertRaises(AttributeError):
+            self.target_class('cls', (RequestError, ), {})
+
+        with self.assertRaises(AttributeError):
+            self.target_class('cls', (RequestError, ), {
+                'kind': 'value',
+            })
+
+        self.target_class('cls', (RequestError, ), {
+            'kind': Parameter(str),
+        })
