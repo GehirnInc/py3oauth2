@@ -77,8 +77,9 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(inst.bar, 'value')
 
         from ..exceptions import ValidationError
+        inst.foo = 123
         with self.assertRaises(ValidationError):
-            inst.foo = 123
+            inst.validate()
 
         del inst.foo
         self.assertIsNone(inst.foo)

@@ -71,8 +71,7 @@ class Variable:
     def __set__(self, inst, value):
         assert isinstance(inst, Message)
 
-        if self.param.validate(inst, self.name, value, False):
-            inst.__dict__[self.name] = value
+        inst.__dict__[self.name] = value
 
     def __delete__(self, instance):
         if self.name in instance.__dict__:
@@ -144,7 +143,14 @@ class Message(dict, metaclass=MessageMeta):
     def _from_dict(self, D):
         for k, v in D.items():
             if k in self.__msg_params__:
-                setattr(self, k, v)
+                param = self.__msg_params__[k]
+                if param.editable:
+                    setattr(self, k, v)
+                elif param.default == v:
+                    continue
+                else:
+                    raise ValidationError(
+                        '{0!s} must be \'{1!s}\''.format(k, param.default))
             else:
                 self[k] = v
 
