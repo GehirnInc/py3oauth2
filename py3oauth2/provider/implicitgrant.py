@@ -46,7 +46,7 @@ class Request(message.Request):
 
                 token = provider.store.persist_access_token(
                     client, owner, provider.generate_access_token(),
-                    self.scope)
+                    self.scope, None)
             except message.RequestError:
                 raise
             except:

@@ -69,6 +69,9 @@ class IStore:
     def get_access_token_length(self):
         raise NotImplementedError
 
+    def get_refresh_token_length(self):
+        raise NotImplementedError
+
     def persist_authorization_code(self, client, owner, code, scope):
         raise NotImplementedError
 

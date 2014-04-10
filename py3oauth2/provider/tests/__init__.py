@@ -6,7 +6,7 @@ from ..interfaces import (
     IClient,
     IStore,
 )
-from ..message import UnauthorizedClient
+from .. import message
 from ..provider import AuthorizationProvider
 
 
@@ -88,6 +88,7 @@ class Store(IStore):
     def __init__(self):
         self.clients = dict()
         self.access_tokens = dict()
+        self.refresh_tokens = dict()
         self.authorization_codes = dict()
 
     def persist_client(self, client):
@@ -96,9 +97,11 @@ class Store(IStore):
     def get_client(self, client_id):
         return self.clients.get(client_id)
 
-    def persist_access_token(self, client, owner, token, scope):
-        tokenobj = AccessToken(client, owner, token, 0, scope)
+    def persist_access_token(self, client, owner, token, scope, refresh_token):
+        tokenobj = AccessToken(client, owner, token, 0, scope, refresh_token)
         self.access_tokens[tokenobj.get_token()] = tokenobj
+        if tokenobj.get_refresh_token():
+            self.refresh_tokens[tokenobj.get_refresh_token()] = tokenobj
         return tokenobj
 
     def discard_access_token(self, token):
@@ -108,6 +111,9 @@ class Store(IStore):
         return self.access_tokens.get(token)
 
     def get_access_token_length(self):
+        return 40
+
+    def get_refresh_token_length(self):
         return 40
 
     def persist_authorization_code(self, client, owner, code, scope):
@@ -140,4 +146,4 @@ class BrokenAuthorizationProvider(AuthorizationProvider):
 class DummyAuthorizationProvider(AuthorizationProvider):
 
     def authorize_client(self, client):
-        raise UnauthorizedClient
+        raise message.UnauthorizedClient

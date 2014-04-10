@@ -87,7 +87,8 @@ class AccessTokenRequest(message.Request):
 
                 token = provider.store.persist_access_token(
                     authcode.get_client(), authcode.get_owner(),
-                    provider.generate_access_token(), authcode.get_scope())
+                    provider.generate_access_token(), authcode.get_scope(),
+                    provider.generate_refresh_token())
             except message.RequestError:
                 raise
             except:

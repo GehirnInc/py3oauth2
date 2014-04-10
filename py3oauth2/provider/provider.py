@@ -30,17 +30,23 @@ class AuthorizationProvider:
     def authorize_client(self, client):
         raise NotImplementedError
 
-    def generate_authorization_code(self):
+    def _generate_random_string(self, length):
         return utils.generate_random_string(
-            self.store.get_authorization_code_length(),
+            length,
             utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS
         )
 
+    def generate_authorization_code(self):
+        return self._generate_random_string(
+            self.store.get_authorization_code_length())
+
     def generate_access_token(self):
-        return utils.generate_random_string(
-            self.store.get_access_token_length(),
-            utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS
-        )
+        return self._generate_random_string(
+            self.store.get_access_token_length())
+
+    def generate_refresh_token(self):
+        return self._generate_random_string(
+            self.store.get_refresh_token_length())
 
     def _detect_request_class(self, request):
         if 'grant_type' in request:

@@ -33,7 +33,9 @@ class RefreshTokenRequest(Request):
 
                 token = provider.store.persist_access_token(
                     previous.get_client(), previous.get_owner(),
-                    provider.generate_access_token())
+                    provider.generate_access_token(),
+                    self.scope or previous.get_scope(),
+                    provider.generate_refresh_token())
             except RequestError:
                 raise
             except:
