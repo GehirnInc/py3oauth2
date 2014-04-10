@@ -57,7 +57,9 @@ class TestAuthorizationProvider(unittest.TestCase):
         self.assertIsInstance(
             preresp,
             authorizationcodegrant.AuthorizationRequest.response)
-        self.assertIn(preresp.code, self.store.authorization_codes.keys())
+
+        authcode = self.store.get_authorization_code(preresp.code)
+        self.assertIsNotNone(authcode)
         self.assertEqual(preresp.state, prereq['state'])
 
         req = {
@@ -66,12 +68,18 @@ class TestAuthorizationProvider(unittest.TestCase):
             'client_id': self.client.get_id(),
         }
         resp = self.provider.handle_request(req, self.owner)
+
         self.assertIsInstance(
             resp.request,
             authorizationcodegrant.AccessTokenRequest)
         self.assertIsInstance(resp, message.AccessTokenResponse)
-        self.assertEqual(len(resp.access_token), 40)
-        self.assertEqual(resp.token_type, 'bearer')
+
+        token = self.store.get_access_token(resp.access_token)
+        self.assertIsNotNone(token)
+        self.assertEqual(len(token.get_token()), 40)
+        self.assertEqual(resp.token_type, token.get_type())
+        self.assertEqual(resp.expires_in, token.get_expires_in())
+        self.assertEqual(resp.scope, token.get_scope())
 
     def test_handle_request_not_found(self):
         req = {}

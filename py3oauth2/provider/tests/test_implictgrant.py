@@ -36,6 +36,8 @@ class TestRequest(unittest.TestCase):
             'client_id': 'unknown_client_id',
         })
         resp = req.answer(provider, self.owner)
+        resp.validate()
+
         self.assertIsInstance(resp, req.err_response)
         self.assertEqual(resp.error, 'unauthorized_client')
 
@@ -47,6 +49,8 @@ class TestRequest(unittest.TestCase):
             'client_id': self.client.id,
         })
         resp = req.answer(provider, self.owner)
+        resp.validate()
+
         self.assertIsInstance(resp, req.err_response)
         self.assertEqual(resp.error, 'unauthorized_client')
 
@@ -58,6 +62,8 @@ class TestRequest(unittest.TestCase):
             'client_id': self.client.id,
         })
         resp = req.answer(provider, self.owner)
+        resp.validate()
+
         self.assertIsInstance(resp, req.err_response)
         self.assertEqual(resp.error, 'server_error')
 
@@ -71,10 +77,13 @@ class TestRequest(unittest.TestCase):
             'state': ''.join(random.choice(pool) for _ in range(40)),
         })
         resp = req.answer(provider, self.owner)
+        resp.validate()
+
         self.assertIsInstance(resp, req.response)
 
         token = self.store.get_access_token(resp.access_token)
         self.assertIsNotNone(token)
+        self.assertEqual(len(token.get_token()), 40)
         self.assertEqual(resp.token_type, token.get_type())
         self.assertEqual(resp.expires_in, token.get_expires_in())
         self.assertEqual(resp.scope, token.get_scope())
