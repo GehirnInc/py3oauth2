@@ -25,10 +25,10 @@ class Client(IClient):
 
 class AccessToken(IAccessToken):
 
-    def __init__(self, owner, client, token, expires_in, scope,
+    def __init__(self, client, owner, token, expires_in, scope,
                  refresh_token=None):
-        self.owner = owner
         self.client = client
+        self.owner = owner
         self.token = token
         self.expires_in = expires_in
         self.scope = scope
@@ -88,20 +88,33 @@ class Store(IStore):
         self.access_tokens = dict()
         self.authorization_codes = dict()
 
+    def persist_client(self, client):
+        self.clients[client.get_id()] = client
+
     def get_client(self, client_id):
         return self.clients.get(client_id)
 
-    def persist_access_token(self, token):
-        self.access_tokens[token.get_token()] = token
+    def persist_access_token(self, client, owner, token, scope):
+        tokenobj = AccessToken(client, owner, token, 0, scope)
+        self.access_tokens[tokenobj.get_token()] = tokenobj
+        return tokenobj
 
     def discard_access_token(self, token):
         del self.access_tokens[token.get_token()]
 
-    def persist_authorization_code(self, code):
-        self.authorization_codes[code.get_code()] = code
+    def get_access_token_length(self):
+        return 40
+
+    def persist_authorization_code(self, client, owner, code, scope):
+        codeobj = AuthorizationCode(client, owner, code, scope)
+        self.authorization_codes[codeobj.get_code()] = codeobj
+        return codeobj
 
     def discard_authorization_code(self, code):
         del self.authorization_codes[code.get_code()]
 
     def get_authorization_code(self, code):
-        return self.authorization_codes.get(code.get_code())
+        return self.authorization_codes.get(code)
+
+    def get_authorization_code_length(self):
+        return 40
