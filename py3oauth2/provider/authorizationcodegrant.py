@@ -78,6 +78,10 @@ class AccessTokenRequest(message.Request):
             try:
                 authcode = provider.store.get_authorization_code(self.code)
                 if authcode is None or authcode.is_used():
+                    # NOTES: If an authorization code is used more than once,
+                    # the authorization server MUST deny the request and SHOULD
+                    # revoke (when possible) all tokens previously issued
+                    # based on that authorization code.
                     raise message.AccessDenied()
 
                 client = provider.store.get_client(self.client_id)
