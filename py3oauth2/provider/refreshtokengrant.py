@@ -18,7 +18,8 @@ class RefreshTokenRequest(Request):
     response = AccessTokenResponse
     err_response = ErrorResponse
 
-    grant_type = Parameter(str, required=True)
+    grant_type = Parameter(str, required=True,
+                           default='refresh_token', editable=False)
     refresh_token = Parameter(str, required=True)
     scope = Parameter(str)
 
