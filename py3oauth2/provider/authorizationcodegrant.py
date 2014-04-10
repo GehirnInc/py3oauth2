@@ -42,7 +42,7 @@ class AuthorizationRequest(message.Request):
                     raise message.UnauthorizedClient
                 provider.authorize_client(client)
 
-                code = self.store.persist_authorization_code(
+                code = provider.store.persist_authorization_code(
                     client, owner, provider.generate_authorization_code(),
                     self.scope)
             except message.RequestError:
@@ -74,18 +74,18 @@ class AccessTokenRequest(message.Request):
     def answer(self, provider, owner):
         try:
             try:
-                authcode = self.store.get_authorization_code(self.code)
+                authcode = provider.store.get_authorization_code(self.code)
                 if authcode is None or authcode.is_used():
                     raise message.AccessDenied()
 
-                client = self.store.get_client(self.client_id)
-                if client is None or not self.authorize_client(client)\
+                client = provider.store.get_client(self.client_id)
+                if client is None or not provider.authorize_client(client)\
                         or client.get_id() != authcode.get_client().get_id():
                     raise message.UnauthorizedClient
 
                 token = provider.store.persist_access_token(
                     authcode.get_client(), authcode.get_owner(),
-                    self.generate_access_token(), authcode.get_scope())
+                    provider.generate_access_token(), authcode.get_scope())
             except message.RequestError:
                 raise
             except:

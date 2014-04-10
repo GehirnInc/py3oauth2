@@ -27,7 +27,7 @@ class AuthorizationProvider:
     def __init__(self, store):
         self.store = store
 
-    def validate_client(self, client):
+    def authorize_client(self, client):
         raise NotImplementedError
 
     def generate_authorization_code(self):
@@ -43,20 +43,20 @@ class AuthorizationProvider:
         )
 
     def _detect_request_class(self, request):
-        if hasattr(request, 'grant_type'):
-            return self.requests['grant_type'].get(request.grant_type)
-        elif hasattr(request, 'response_type'):
-            return self.requests['response_type'].get(request.response_type)
+        if 'grant_type' in request:
+            return self.requests['grant_type'].get(request['grant_type'])
+        elif 'response_type' in request:
+            return self.requests['response_type'].get(request['response_type'])
 
         return None
 
     def handle_request(self, request_dict, owner=None):
-        request_class = self.detect_request_class(request_dict)
+        request_class = self._detect_request_class(request_dict)
         if request_class is None:
             raise ValueError('Request class not found')
 
+        request = request_class.from_dict(request_dict)
         try:
-            request = request_class.from_dict(request_dict)
             request.validate()
         except ValidationError:
             resp = request_class.err_response(request)
