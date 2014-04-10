@@ -189,19 +189,6 @@ class AccessTokenResponse(Response):
     refresh_token = Parameter(str)
     scope = Parameter(str)
 
-    @classmethod
-    def from_request(cls, request, token):
-        D = {
-            'access_token': token.get_token(),
-            'token_type': token.get_type(),
-            'expires_in': token.get_expires_in(),
-            'refresh_token': token.get_refresh_token(),
-        }
-        if hasattr(request, 'scope') and request.scope != token.get_scope():
-            D['scope'] = token.get_scope()
-
-        return cls.from_dict(request, D)
-
 
 class ErrorResponse(Response):
     error = Parameter(str, required=True)
