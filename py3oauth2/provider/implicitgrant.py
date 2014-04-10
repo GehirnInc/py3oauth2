@@ -54,6 +54,7 @@ class Request(message.Request):
         except message.RequestError as why:
             resp = self.err_response(self)
             resp.error = why.kind
+            resp.state = self.state
             return resp
         else:
             return self.response.from_dict(self, {
