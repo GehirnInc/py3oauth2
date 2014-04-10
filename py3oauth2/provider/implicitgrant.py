@@ -41,7 +41,7 @@ class Request(message.Request):
         try:
             try:
                 client = provider.store.get_client(self.client_id)
-                if client is None or provider.authorize_client(client):
+                if client is None or not provider.authorize_client(client):
                     raise message.UnauthorizedClient
 
                 token = provider.store.persist_access_token(
