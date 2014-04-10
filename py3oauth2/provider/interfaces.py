@@ -9,6 +9,12 @@ class IClient:
 
 class IAccessToken:
 
+    def get_client(self):
+        raise NotImplementedError
+
+    def get_owner(self):
+        raise NotImplementedError
+
     def get_token(self):
         raise NotImplementedError
 
@@ -43,4 +49,25 @@ class IAuthorizationCode:
         raise NotImplementedError
 
     def mark_as_used(self):
+        raise NotImplementedError
+
+
+class IStore:
+
+    def get_client(self, client_id):
+        raise NotImplementedError
+
+    def persist_access_token(self, token):
+        raise NotImplementedError
+
+    def discard_access_token(self, token):
+        raise NotImplementedError
+
+    def persist_authorization_code(self, code):
+        raise NotImplementedError
+
+    def discard_authorization_code(self, code):
+        raise NotImplementedError
+
+    def get_authorization_code(self, code):
         raise NotImplementedError
