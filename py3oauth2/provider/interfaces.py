@@ -78,9 +78,6 @@ class IStore:
     def persist_authorization_code(self, client, owner, code, scope):
         raise NotImplementedError
 
-    def discard_authorization_code(self, code):
-        raise NotImplementedError
-
     def get_authorization_code(self, code):
         raise NotImplementedError
 

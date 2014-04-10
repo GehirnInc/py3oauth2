@@ -127,9 +127,6 @@ class Store(IStore):
         self.authorization_codes[codeobj.get_code()] = codeobj
         return codeobj
 
-    def discard_authorization_code(self, code):
-        del self.authorization_codes[code.get_code()]
-
     def get_authorization_code(self, code):
         return self.authorization_codes.get(code)
 
