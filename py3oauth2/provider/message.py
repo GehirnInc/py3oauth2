@@ -85,7 +85,7 @@ class Constant(Variable):
         if inst is None:
             return self.param
 
-        assert isinstance(inst, Message)
+        assert isinstance(inst, (Message, RequestError))
         return self.param.default
 
     def __set__(self, inst, value):
