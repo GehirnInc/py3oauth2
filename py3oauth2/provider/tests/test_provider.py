@@ -14,6 +14,7 @@ from . import (
     Client,
     Owner,
     Store,
+    Request as TestRequest,
 )
 
 
@@ -40,6 +41,12 @@ class TestAuthorizationProvider(unittest.TestCase):
 
         code = self.provider.generate_access_token()
         self.assertEqual(len(code), 40)
+
+    def test_generate_refresh_token(self):
+        pool = string.ascii_letters + string.digits
+
+        code = self.provider.generate_refresh_token()
+        self.assertEqual(len(code), self.store.get_refresh_token_length())
         self.assertTrue(all(map(lambda c: c in pool, code)))
 
     def test_handle_request_authorizationcodegrant(self):
@@ -99,3 +106,13 @@ class TestAuthorizationProvider(unittest.TestCase):
             resp,
             authorizationcodegrant.AuthorizationRequest.err_response)
         self.assertEqual(resp.error, 'invalid_request')
+
+    def test_handle_request_server_error(self):
+        req = {
+            'grant_type': 'test',
+        }
+
+        resp = self.provider.handle_request(req)
+        self.assertIsInstance(resp.request, TestRequest)
+        self.assertIsInstance(resp, TestRequest.err_response)
+        self.assertEqual(resp.error, 'server_error')

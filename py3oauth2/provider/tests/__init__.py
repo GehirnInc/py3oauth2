@@ -134,19 +134,39 @@ class Store(IStore):
         return 40
 
 
+class Response(message.Response):
+    param = message.Parameter(str, required=True)
+
+
+class Request(message.Request):
+    response = Response
+    err_response = message.ErrorResponse
+
+    grant_type = message.Parameter(str, required=True,
+                                   default='test', editable=False)
+
+    def handle(self, provider, owner):
+        return self.response(self)
+
+
 class BlindAuthorizationProvider(AuthorizationProvider):
+
+    def __init__(self, store):
+        super(BlindAuthorizationProvider, self).__init__(store)
+
+        self.requests['grant_type']['test'] = Request
 
     def authorize_client(self, client):
         return True
 
 
-class BrokenAuthorizationProvider(AuthorizationProvider):
+class BrokenAuthorizationProvider(BlindAuthorizationProvider):
 
     def authorize_client(self, client):
         raise RuntimeError
 
 
-class DummyAuthorizationProvider(AuthorizationProvider):
+class DummyAuthorizationProvider(BlindAuthorizationProvider):
 
     def authorize_client(self, client):
         raise message.UnauthorizedClient
