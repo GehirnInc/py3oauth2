@@ -80,7 +80,7 @@ class TestAccessTokenRequest(unittest.TestCase):
         self.authcode = self.store.persist_authorization_code(
             self.client, self.owner,
             utils.generate_random_string(
-                self.store.get_access_token_length(),
+                self.store.get_authorization_code_length(),
                 utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS
             ),
             None,

@@ -39,6 +39,9 @@ class AccessToken(IAccessToken):
     def get_client(self):
         return self.client
 
+    def get_owner(self):
+        return self.owner
+
     def get_token(self):
         return self.token
 
