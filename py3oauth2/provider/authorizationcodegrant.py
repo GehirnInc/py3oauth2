@@ -66,7 +66,9 @@ class AccessTokenRequest(message.Request):
     response = message.AccessTokenResponse
     err_response = message.ErrorResponse
 
-    grant_type = message.Parameter(str, required=True)
+    grant_type = message.Parameter(str, required=True,
+                                   default='authorization_code',
+                                   editable=False)
     code = message.Parameter(str, required=True)
     redirect_uri = message.Parameter(str)
     client_id = message.Parameter(str, required=True)
