@@ -63,4 +63,12 @@ class AuthorizationProvider:
             resp.error = 'invalid_request'
             return resp
         else:
-            return request.answer(self, owner)
+            try:
+                resp = request.answer(self, owner)
+                resp.validate()
+            except:
+                resp = request_class.err_response(request)
+                resp.error = 'server_error'
+                return resp
+            else:
+                return resp
