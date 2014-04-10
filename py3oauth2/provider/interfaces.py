@@ -57,17 +57,23 @@ class IStore:
     def get_client(self, client_id):
         raise NotImplementedError
 
-    def persist_access_token(self, token):
+    def persist_access_token(self, client, owner, token, scope):
         raise NotImplementedError
 
     def discard_access_token(self, token):
         raise NotImplementedError
 
-    def persist_authorization_code(self, code):
+    def get_access_token_length(self):
+        raise NotImplementedError
+
+    def persist_authorization_code(self, client, owner, code, scope):
         raise NotImplementedError
 
     def discard_authorization_code(self, code):
         raise NotImplementedError
 
     def get_authorization_code(self, code):
+        raise NotImplementedError
+
+    def get_authorization_code_length(self):
         raise NotImplementedError
