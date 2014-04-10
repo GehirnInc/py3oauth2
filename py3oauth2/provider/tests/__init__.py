@@ -4,6 +4,7 @@ from ..interfaces import (
     IAccessToken,
     IAuthorizationCode,
     IClient,
+    IStore,
 )
 
 
@@ -78,3 +79,29 @@ class AuthorizationCode(IAuthorizationCode):
 
     def mark_as_used(self):
         self.used = True
+
+
+class Store(IStore):
+
+    def __init__(self):
+        self.clients = dict()
+        self.access_tokens = dict()
+        self.authorization_codes = dict()
+
+    def get_client(self, client_id):
+        return self.clients.get(client_id)
+
+    def persist_access_token(self, token):
+        self.access_tokens[token.get_token()] = token
+
+    def discard_access_token(self, token):
+        del self.access_tokens[token.get_token()]
+
+    def persist_authorization_code(self, code):
+        self.authorization_codes[code.get_code()] = code
+
+    def discard_authorization_code(self, code):
+        del self.authorization_codes[code.get_code()]
+
+    def get_authorization_code(self, code):
+        return self.authorization_codes.get(code.get_code())
