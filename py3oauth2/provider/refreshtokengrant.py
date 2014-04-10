@@ -25,8 +25,9 @@ class RefreshTokenRequest(Request):
     def answer(self, provider, owner):
         try:
             try:
-                previous =\
-                    provider.store.from_refresh_token(self.refresh_token)
+                previous = provider.store.get_access_token_by_refresh_token(
+                    self.refresh_token
+                )
                 if previous is None:
                     raise AccessDenied
                 provider.store.discard_access_token(previous)

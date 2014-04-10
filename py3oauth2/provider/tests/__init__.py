@@ -110,6 +110,9 @@ class Store(IStore):
     def get_access_token(self, token):
         return self.access_tokens.get(token)
 
+    def get_access_token_by_refresh_token(self, refresh_token):
+        return self.refresh_tokens.get(refresh_token)
+
     def get_access_token_length(self):
         return 40
 
