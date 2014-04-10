@@ -15,3 +15,6 @@ script:
     - tox
 after_success:
     - if test "$TOXENV" = coverage; then coveralls; fi
+notifications:
+    slack:
+        - gehirn:xxuGA4N6aUYhTmKJYdM15ieu
