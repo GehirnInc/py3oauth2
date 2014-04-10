@@ -33,14 +33,15 @@ class TestAuthorizationProvider(unittest.TestCase):
         pool = string.ascii_letters + string.digits
 
         code = self.provider.generate_authorization_code()
-        self.assertEqual(len(code), 40)
+        self.assertEqual(len(code), self.store.get_authorization_code_length())
         self.assertTrue(all(map(lambda c: c in pool, code)))
 
     def test_generate_access_token(self):
         pool = string.ascii_letters + string.digits
 
         code = self.provider.generate_access_token()
-        self.assertEqual(len(code), 40)
+        self.assertEqual(len(code), self.store.get_access_token_length())
+        self.assertTrue(all(map(lambda c: c in pool, code)))
 
     def test_generate_refresh_token(self):
         pool = string.ascii_letters + string.digits
