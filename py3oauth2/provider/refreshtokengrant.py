@@ -32,6 +32,17 @@ class RefreshTokenRequest(Request):
                     raise AccessDenied
                 provider.store.discard_access_token(previous)
 
+                provider.authorize_client(previous.get_client())
+
+                if self.scope:
+                    if previous.get_scope() is None:
+                        raise AccessDenied
+
+                    prescopes = set(previous.get_scope().split())
+                    reqscopes = set(self.scope.split())
+                    if not reqscopes.issubset(prescopes):
+                        raise AccessDenied
+
                 token = provider.store.persist_access_token(
                     previous.get_client(), previous.get_owner(),
                     provider.generate_access_token(),
