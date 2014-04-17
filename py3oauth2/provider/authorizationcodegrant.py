@@ -32,15 +32,14 @@ class AuthorizationRequest(message.Request):
     client_id = message.Parameter(str, required=True)
     redirect_uri = message.Parameter(str)
     scope = message.Parameter(str)
-    state = message.Parameter(str)
+    state = message.Parameter(str, recommended=True)
 
     def answer(self, provider, owner):
         try:
             try:
                 client = provider.store.get_client(self.client_id)
-                if client is None:
+                if client is None or not provider.authorize_client(client):
                     raise message.UnauthorizedClient
-                provider.authorize_client(client)
 
                 code = provider.store.persist_authorization_code(
                     client, owner, provider.generate_authorization_code(),
