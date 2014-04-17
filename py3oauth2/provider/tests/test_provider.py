@@ -9,6 +9,10 @@ from .. import (
     authorizationcodegrant,
     message,
 )
+from ..exceptions import (
+    ErrorResponse,
+    UnknownRequest,
+)
 from . import (
     BlindAuthorizationProvider,
     Client,
@@ -50,7 +54,7 @@ class TestAuthorizationProvider(unittest.TestCase):
         self.assertEqual(len(code), self.store.get_refresh_token_length())
         self.assertTrue(all(map(lambda c: c in pool, code)))
 
-    def test_handle_request_authorizationcodegrant(self):
+    def test_decode_request_authorizationcodegrant(self):
         pool = string.ascii_letters + string.digits
         prereq = {
             'response_type': 'code',
@@ -58,13 +62,17 @@ class TestAuthorizationProvider(unittest.TestCase):
             'state': ''.join(random.choice(pool) for _ in range(40))
         }
 
-        preresp = self.provider.handle_request(prereq)
+        prerequest = self.provider.decode_request(prereq)
         self.assertIsInstance(
-            preresp.request,
-            authorizationcodegrant.AuthorizationRequest)
+            prerequest,
+            authorizationcodegrant.AuthorizationRequest
+        )
+
+        preresp = self.provider.handle_request(prerequest)
         self.assertIsInstance(
             preresp,
-            authorizationcodegrant.AuthorizationRequest.response)
+            authorizationcodegrant.AuthorizationRequest.response
+        )
 
         authcode = self.store.get_authorization_code(preresp.code)
         self.assertIsNotNone(authcode)
@@ -75,11 +83,13 @@ class TestAuthorizationProvider(unittest.TestCase):
             'code': preresp.code,
             'client_id': self.client.get_id(),
         }
-        resp = self.provider.handle_request(req, self.owner)
-
+        request = self.provider.decode_request(req)
         self.assertIsInstance(
-            resp.request,
-            authorizationcodegrant.AccessTokenRequest)
+            request,
+            authorizationcodegrant.AccessTokenRequest
+        )
+
+        resp = self.provider.handle_request(request, self.owner)
         self.assertIsInstance(resp, message.AccessTokenResponse)
 
         token = self.store.get_access_token(resp.access_token)
@@ -89,31 +99,31 @@ class TestAuthorizationProvider(unittest.TestCase):
         self.assertEqual(resp.expires_in, token.get_expires_in())
         self.assertEqual(resp.scope, token.get_scope())
 
-    def test_handle_request_not_found(self):
+    def test_decode_request_not_found(self):
         req = {}
-        with self.assertRaises(ValueError):
-            self.provider.handle_request(req)
+        with self.assertRaises(UnknownRequest):
+            self.provider.decode_request(req)
 
-    def test_handle_request_invalid_request(self):
+    def test_decode_request_invalid_request(self):
         req = {
             'response_type': 'code',
             'client_id': 12345,
         }
 
-        resp = self.provider.handle_request(req)
-        self.assertIsInstance(resp.request,
-                              authorizationcodegrant.AuthorizationRequest)
-        self.assertIsInstance(
-            resp,
-            authorizationcodegrant.AuthorizationRequest.err_response)
-        self.assertEqual(resp.error, 'invalid_request')
+        with self.assertRaises(ErrorResponse) as why:
+            self.provider.decode_request(req)
+            self.assertIsInstance(why.response.request,
+                                  authorizationcodegrant.AuthorizationRequest)
+            self.assertIsInstance(
+                why.response,
+                authorizationcodegrant.AuthorizationRequest.err_response
+            )
+            self.assertEqual(why.response.error, 'invalid_request')
 
-    def test_handle_request_server_error(self):
+    def test_decode_request_server_error(self):
         req = {
             'grant_type': 'test',
         }
 
-        resp = self.provider.handle_request(req)
-        self.assertIsInstance(resp.request, TestRequest)
-        self.assertIsInstance(resp, TestRequest.err_response)
-        self.assertEqual(resp.error, 'server_error')
+        request = self.provider.decode_request(req)
+        self.assertIsInstance(request, TestRequest)

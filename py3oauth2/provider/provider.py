@@ -6,7 +6,11 @@ from . import (
     refreshtokengrant,
     utils,
 )
-from .exceptions import ValidationError
+from .exceptions import (
+    ErrorResponse,
+    UnknownRequest,
+    ValidationError,
+)
 
 
 __all__ = ['AuthorizationProvider']
@@ -48,7 +52,7 @@ class AuthorizationProvider:
         return self._generate_random_string(
             self.store.get_refresh_token_length())
 
-    def _detect_request_class(self, request):
+    def detect_request_class(self, request):
         if 'grant_type' in request:
             return self.requests['grant_type'].get(request['grant_type'])
         elif 'response_type' in request:
@@ -56,25 +60,28 @@ class AuthorizationProvider:
 
         return None
 
-    def handle_request(self, request_dict, owner=None):
-        request_class = self._detect_request_class(request_dict)
+    def decode_request(self, request_dict):
+        request_class = self.detect_request_class(request_dict)
         if request_class is None:
-            raise ValueError('Request class not found')
+            raise UnknownRequest()
 
-        request = request_class.from_dict(request_dict)
         try:
+            request = request_class.from_dict(request_dict)
             request.validate()
-        except ValidationError:
+        except ValidationError as why:
             resp = request_class.err_response(request)
             resp.error = 'invalid_request'
-            return resp
+            raise ErrorResponse(resp) from why
         else:
-            try:
-                resp = request.answer(self, owner)
-                resp.validate()
-            except:
-                resp = request_class.err_response(request)
-                resp.error = 'server_error'
-                return resp
-            else:
-                return resp
+            return request
+
+    def handle_request(self, request, owner=None):
+        try:
+            resp = request.answer(self, owner)
+            resp.validate()
+        except BaseException as why:
+            resp = request.err_response(request)
+            resp.error = 'server_error'
+            raise ErrorResponse(resp) from why
+        else:
+            return resp
