@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime
+
 from ..interfaces import (
     IAccessToken,
     IAuthorizationCode,
@@ -7,7 +9,10 @@ from ..interfaces import (
     IStore,
 )
 from .. import message
-from ..provider import AuthorizationProvider
+from ..provider import (
+    AuthorizationProvider,
+    ResourceProvider,
+)
 
 
 class Owner:
@@ -35,6 +40,7 @@ class AccessToken(IAccessToken):
         self.expires_in = expires_in
         self.scope = scope
         self.refresh_token = refresh_token
+        self.issued_at = datetime.utcnow()
 
     def get_client(self):
         return self.client
@@ -56,6 +62,9 @@ class AccessToken(IAccessToken):
 
     def get_refresh_token(self):
         return self.refresh_token
+
+    def get_issued_at(self):
+        return self.issued_at
 
 
 class AuthorizationCode(IAuthorizationCode):
@@ -101,7 +110,8 @@ class Store(IStore):
         return self.clients.get(client_id)
 
     def persist_access_token(self, client, owner, token, scope, refresh_token):
-        tokenobj = AccessToken(client, owner, token, 0, scope, refresh_token)
+        tokenobj =\
+            AccessToken(client, owner, token, 3600, scope, refresh_token)
         self.access_tokens[tokenobj.get_token()] = tokenobj
         if tokenobj.get_refresh_token():
             self.refresh_tokens[tokenobj.get_refresh_token()] = tokenobj
@@ -170,3 +180,14 @@ class DummyAuthorizationProvider(BlindAuthorizationProvider):
 
     def authorize_client(self, client):
         raise message.UnauthorizedClient
+
+
+class DummyResourceProvider(ResourceProvider):
+
+    def __init__(self, store, token, token_type):
+        super(DummyResourceProvider, self).__init__(store)
+        self.token = token
+        self.token_type = token_type
+
+    def get_access_token(self):
+        return (self.token, self.token_type)
