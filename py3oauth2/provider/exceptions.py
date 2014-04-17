@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 
+AccessDenied = type('AccessDenied', (Exception, ), {})
+
+
 DenyAuthentication = type('DenyAuthentication', (Exception, ), {})
 
 

@@ -7,13 +7,14 @@ from . import (
     utils,
 )
 from .exceptions import (
+    AccessDenied,
     ErrorResponse,
     UnknownRequest,
     ValidationError,
 )
 
 
-__all__ = ['AuthorizationProvider']
+__all__ = ['AuthorizationProvider', 'ResourceProvider']
 
 
 class AuthorizationProvider:
@@ -85,3 +86,28 @@ class AuthorizationProvider:
             raise ErrorResponse(resp) from why
         else:
             return resp
+
+
+class ResourceProvider:
+
+    def __init__(self, store):
+        self.store = store
+
+    def get_access_token(self):
+        raise NotImplementedError
+
+    def authorize(self, required_scope):
+        try:
+            token = self.store.get_access_token(self.get_access_token())
+            if token is None or not token.validate():
+                raise AccessDenied()
+
+            authorized_scopes = set(token.get_scope().split())
+            if not required_scope.issubset(authorized_scopes):
+                raise AccessDenied()
+
+            return True
+        except AccessDenied:
+            raise
+        else:
+            return True
