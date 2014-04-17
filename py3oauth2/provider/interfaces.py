@@ -30,6 +30,9 @@ class IAccessToken:
     def get_refresh_token(self):
         raise NotImplementedError
 
+    def get_issued_at(self):
+        raise NotImplementedError
+
 
 class IAuthorizationCode:
 
@@ -57,7 +60,7 @@ class IStore:
     def get_client(self, client_id):
         raise NotImplementedError
 
-    def persist_access_token(self, client, owner, token, scope):
+    def persist_access_token(self, client, owner, token, scope, refresh_token):
         raise NotImplementedError
 
     def discard_access_token(self, token):
