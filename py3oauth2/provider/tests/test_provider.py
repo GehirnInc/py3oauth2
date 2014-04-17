@@ -110,8 +110,9 @@ class TestAuthorizationProvider(unittest.TestCase):
             'client_id': 12345,
         }
 
-        with self.assertRaises(ErrorResponse) as why:
+        try:
             self.provider.decode_request(req)
+        except ErrorResponse as why:
             self.assertIsInstance(why.response.request,
                                   authorizationcodegrant.AuthorizationRequest)
             self.assertIsInstance(
@@ -119,6 +120,8 @@ class TestAuthorizationProvider(unittest.TestCase):
                 authorizationcodegrant.AuthorizationRequest.err_response
             )
             self.assertEqual(why.response.error, 'invalid_request')
+        else:
+            self.fail('ErrorResponse was not raised')
 
     def test_decode_request_server_error(self):
         req = {
