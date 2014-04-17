@@ -124,4 +124,4 @@ class ResourceProvider:
         except AccessDenied:
             raise
         else:
-            return True
+            return tokenobj

@@ -27,7 +27,7 @@ license = _read("LICENSE.md")
 
 setup(
     name='py3oauth2',
-    version='0.1.1',
+    version='0.1.2',
     test_suite='py3oauth2',
     author='Kohei YOSHIDA',
     author_email='kohei.yoshida@gehirn.co.jp',
