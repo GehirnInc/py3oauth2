@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from ..interfaces import (
+    ClientType,
     IAccessToken,
     IAuthorizationCode,
     IClient,
@@ -28,6 +29,12 @@ class Client(IClient):
 
     def get_id(self):
         return self.id
+
+    def get_redirect_uri(self):
+        return 'http://example.com/cb'
+
+    def get_type(self):
+        return ClientType.CONFIDENTIAL
 
 
 class AccessToken(IAccessToken):

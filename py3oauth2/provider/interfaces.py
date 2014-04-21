@@ -1,9 +1,22 @@
 # -*- coding: utf-8 -*-
 
+import enum
+
+
+class ClientType(enum.Enum):
+    PUBLIC = 'public'
+    CONFIDENTIAL = 'confidential'
+
 
 class IClient:
 
     def get_id(self):
+        raise NotImplementedError
+
+    def get_redirect_uri(self):
+        raise NotImplementedError
+
+    def get_type(self):
         raise NotImplementedError
 
 
