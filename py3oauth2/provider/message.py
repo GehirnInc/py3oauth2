@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import json
+from urllib.parse import (
+    parse_qsl,
+    urlencode,
+    urlparse,
+    urlunparse,
+)
 
 from .exceptions import ValidationError
 
@@ -174,6 +180,45 @@ class Response(Message):
     def __init__(self, request, *args, **kwargs):
         super(Response, self).__init__(self, *args, **kwargs)
         self.request = request
+        self.__redirect_uri = None
+
+    def is_redirect(self):
+        raise NotImplementedError
+
+    def get_redirect_to(self):
+        assert self.is_redirect()
+        assert hasattr(self.request, 'response_type')
+        assert self.redirect_uri
+
+        if hasattr(self.request, 'response_mode'):
+            is_fragment = self.request.response_mode == 'fragment'
+        else:
+            response_types = set(self.request.response_type.split())
+            is_fragment = 'token' in response_types
+
+        parsed = urlparse(self.redirect_uri)
+        if is_fragment:
+            parsed.fragment = self.to_query_string()
+        else:
+            query = parse_qsl(parsed.query)
+            query.extend(parse_qsl(self.to_query_string()))
+            parsed.query = urlencode(query)
+
+        return urlunparse(parsed)
+
+    def get_content_type(self):
+        raise NotImplementedError
+
+    def get_response_body(self):
+        raise NotImplementedError
+
+    @property
+    def redirect_uri(self):
+        return self.__redirect_uri
+
+    @redirect_uri.setter
+    def redirect_uri(self, redirect_uri):
+        self.__redirect_uri = redirect_uri
 
     @classmethod
     def from_dict(cls, request, D):
@@ -229,3 +274,7 @@ class UnauthorizedClient(RequestError):
 
 class ServerError(RequestError):
     kind = Parameter(str, default='server_error', editable=False)
+
+
+class InvalidRequet(RequestError):
+    kind = Parameter(str, default='invalid_request', editable=False)
