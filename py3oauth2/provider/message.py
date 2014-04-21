@@ -234,11 +234,29 @@ class AccessTokenResponse(Response):
     refresh_token = Parameter(str)
     scope = Parameter(str)
 
+    def is_redirect(self):
+        return False
+
+    def get_content_type(self):
+        return 'text/json;charset=utf8'
+
+    def get_response_body(self):
+        return self.to_json()
+
 
 class ErrorResponse(Response):
     error = Parameter(str, required=True)
     error_descritpion = Parameter(str)
     error_uri = Parameter(str)
+
+    def is_redirect(self):
+        return False
+
+    def get_content_type(self):
+        return 'text/json;charset=utf8'
+
+    def get_response_body(self):
+        return self.to_json()
 
 
 class RequestErrorMeta(type):

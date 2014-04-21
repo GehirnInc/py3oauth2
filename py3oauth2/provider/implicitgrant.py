@@ -10,12 +10,14 @@ def is_state_required(self):
 
 
 class Response(message.Response):
-
     access_token = message.Parameter(str, required=True)
     token_type = message.Parameter(str, required=True)
     expires_in = message.Parameter(int)
     scope = message.Parameter(str)
     state = message.Parameter(str, is_state_required)
+
+    def is_redirect(self):
+        return True
 
 
 class ErrorResponse(message.Response):
@@ -43,6 +45,14 @@ class Request(message.Request):
                 client = provider.store.get_client(self.client_id)
                 if client is None or not provider.authorize_client(client):
                     raise message.UnauthorizedClient
+                client = client
+
+                redirect_uri = self.redirect_uri if self.redirect_uri\
+                    else client.get_redirect_uri()
+                if not redirect_uri:
+                    raise message.InvalidRequet()
+                elif not provider.validate_redirect_uri(client, redirect_uri):
+                    raise message.UnauthorizedClient()
 
                 token = provider.store.persist_access_token(
                     client, owner, provider.generate_access_token(),
@@ -55,12 +65,15 @@ class Request(message.Request):
             resp = self.err_response(self)
             resp.error = why.kind
             resp.state = self.state
+            resp.redirect_uri = self.redirect_uri
             return resp
         else:
-            return self.response.from_dict(self, {
+            response = self.response.from_dict(self, {
                 'access_token': token.get_token(),
                 'token_type': token.get_type(),
                 'expires_in': token.get_expires_in(),
                 'scope': token.get_scope(),
                 'state': self.state,
             })
+            response.redirect_uri = redirect_uri
+            return response

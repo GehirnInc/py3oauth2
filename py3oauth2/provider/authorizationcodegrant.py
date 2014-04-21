@@ -15,12 +15,18 @@ class AuthorizationResponse(message.Response):
     code = message.Parameter(str, required=True)
     state = message.Parameter(str, required=is_state_required)
 
+    def is_redirect(self):
+        return True
+
 
 class AuthorizationErrorResponse(message.Response):
     error = message.Parameter(str, required=True)
     error_descritpion = message.Parameter(str)
     error_uri = message.Parameter(str)
     state = message.Parameter(str, required=is_state_required)
+
+    def is_redirect(self):
+        return True
 
 
 class AuthorizationRequest(message.Request):
@@ -41,6 +47,13 @@ class AuthorizationRequest(message.Request):
                 if client is None or not provider.authorize_client(client):
                     raise message.UnauthorizedClient
 
+                redirect_uri = self.redirect_uri if self.redirect_uri\
+                    else client.get_redirect_uri()
+                if not redirect_uri:
+                    raise message.InvalidRequet()
+                elif not provider.validate_redirect_uri(client, redirect_uri):
+                    raise message.UnauthorizedClient()
+
                 code = provider.store.persist_authorization_code(
                     client, owner, provider.generate_authorization_code(),
                     self.scope)
@@ -51,12 +64,14 @@ class AuthorizationRequest(message.Request):
         except message.RequestError as why:
             resp = self.err_response(self)
             resp.error = why.kind
+            resp.state = self.state
+            resp.redirect_uri = self.redirect_uri
             return resp
         else:
             resp = self.response(self)
             resp.code = code.get_code()
-            if self.state:
-                resp.state = self.state
+            resp.state = self.state
+            resp.redirect_uri = redirect_uri
 
             return resp
 
