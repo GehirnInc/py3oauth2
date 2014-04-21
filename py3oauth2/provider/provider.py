@@ -17,6 +17,7 @@ from .exceptions import (
     UnknownRequest,
     ValidationError,
 )
+from .interfaces import ClientType
 
 
 __all__ = ['AuthorizationProvider', 'ResourceProvider']
@@ -39,6 +40,16 @@ class AuthorizationProvider:
 
     def authorize_client(self, client):
         raise NotImplementedError
+
+    def validate_redirect_uri(self, client, redirect_uri):
+        if not client.get_redirect_uri():
+            return client.get_type() is ClientType.CONFIDENTIAL
+
+        authorized_url = utils.normalize_url(client.get_redirect_uri())
+        if '?' in authorized_url:
+            authorized_url = authorized_url.split('?', 1)[0]
+
+        return self._normalize_url(redirect_uri).hasprefix(authorized_url)
 
     def _generate_random_string(self, length):
         return utils.generate_random_string(
