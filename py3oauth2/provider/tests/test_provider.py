@@ -16,6 +16,7 @@ from ..exceptions import (
     ErrorResponse,
     UnknownRequest,
 )
+from ..interfaces import ClientType
 from . import (
     BlindAuthorizationProvider,
     Client,
@@ -41,6 +42,28 @@ class TestAuthorizationProvider(unittest.TestCase):
         inst = AuthorizationProvider(self.store)
         with self.assertRaises(NotImplementedError):
             inst.authorize_client(self.client)
+
+    def test_validate_redirect_uri(self):
+        self.client.get_redirect_uri = lambda: None
+
+        inst = AuthorizationProvider(self.store)
+        self.assertTrue(
+            inst.validate_redirect_uri(self.client, 'http://example.com/')
+        )
+
+        self.client.get_type = lambda: ClientType.PUBLIC
+        self.assertFalse(
+            inst.validate_redirect_uri(self.client, 'http://example.com/')
+        )
+
+        self.client.get_redirect_uri = lambda: 'http://example.com/ab?a=b'
+        self.assertTrue(inst.validate_redirect_uri(
+            self.client, 'http://example.com/ab/?a=b'
+        ))
+
+        self.assertFalse(
+            inst.validate_redirect_uri(self.client, 'https://example.com/')
+        )
 
     def test_generate_authorization_code(self):
         pool = string.ascii_letters + string.digits

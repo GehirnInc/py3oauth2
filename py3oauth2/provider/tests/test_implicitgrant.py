@@ -28,6 +28,20 @@ class TestRequest(unittest.TestCase):
 
         self.owner = Owner(str(uuid.uuid4()))
 
+    def test_answer_invalid_request(self):
+        provider = BlindAuthorizationProvider(self.store)
+        self.client.get_redirect_uri = lambda: None
+
+        req = Request.from_dict({
+            'response_type': 'token',
+            'client_id': self.client.id,
+        })
+        resp = req.answer(provider, self.owner)
+        resp.validate()
+
+        self.assertIsInstance(resp, req.err_response)
+        self.assertEqual(resp.error, 'invalid_request')
+
     def test_answer_unauthorized_client_1(self):
         provider = BlindAuthorizationProvider(self.store)
 
@@ -47,6 +61,20 @@ class TestRequest(unittest.TestCase):
         req = Request.from_dict({
             'response_type': 'token',
             'client_id': self.client.id,
+        })
+        resp = req.answer(provider, self.owner)
+        resp.validate()
+
+        self.assertIsInstance(resp, req.err_response)
+        self.assertEqual(resp.error, 'unauthorized_client')
+
+    def test_answer_unauthorized_client_3(self):
+        provider = BlindAuthorizationProvider(self.store)
+
+        req = Request.from_dict({
+            'response_type': 'token',
+            'client_id': self.client.id,
+            'redirect_uri': 'http://example.com/',
         })
         resp = req.answer(provider, self.owner)
         resp.validate()
@@ -88,3 +116,4 @@ class TestRequest(unittest.TestCase):
         self.assertEqual(resp.expires_in, token.get_expires_in())
         self.assertEqual(resp.scope, token.get_scope())
         self.assertEqual(resp.state, req.state)
+        self.assertTrue(resp.is_redirect())

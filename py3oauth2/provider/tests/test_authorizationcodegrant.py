@@ -54,6 +54,32 @@ class TestAuthorizationRequest(unittest.TestCase):
         self.assertIsInstance(resp, AuthorizationRequest.err_response)
         self.assertEqual(resp.error, 'unauthorized_client')
 
+    def test_answer_unauthorized_client_3(self):
+        provider = BlindAuthorizationProvider(self.store)
+
+        req = AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': self.client.get_id(),
+            'redirect_uri': 'http://example.com/cb/2'
+        })
+
+        resp = req.answer(provider, self.owner)
+        self.assertIsInstance(resp, AuthorizationRequest.err_response)
+        self.assertEqual(resp.error, 'unauthorized_client')
+
+    def test_answer_invalid_request(self):
+        provider = BlindAuthorizationProvider(self.store)
+        self.client.get_redirect_uri = lambda: None
+
+        req = AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': self.client.get_id(),
+        })
+
+        resp = req.answer(provider, self.owner)
+        self.assertIsInstance(resp, AuthorizationRequest.err_response)
+        self.assertEqual(resp.error, 'invalid_request')
+
     def test_answer_server_error(self):
         provider = BrokenAuthorizationProvider(self.store)
 
@@ -65,6 +91,26 @@ class TestAuthorizationRequest(unittest.TestCase):
         resp = req.answer(provider, self.owner)
         self.assertIsInstance(resp, req.err_response)
         self.assertEqual(resp.error, 'server_error')
+        self.assertTrue(resp.is_redirect())
+
+    def test_answer(self):
+        provider = BlindAuthorizationProvider(self.store)
+
+        req = AuthorizationRequest.from_dict({
+            'response_type': 'code',
+            'client_id': self.client.get_id(),
+            'state': 'state',
+        })
+
+        resp = req.answer(provider, self.owner)
+        resp.validate()
+
+        self.assertIsInstance(resp, req.response)
+        self.assertEqual(req.state, resp.state)
+        code = self.store.get_authorization_code(resp.code)
+        self.assertIsNotNone(code)
+        self.assertEqual(len(code.get_code()), 40)
+        self.assertTrue(resp.is_redirect())
 
 
 class TestAccessTokenRequest(unittest.TestCase):

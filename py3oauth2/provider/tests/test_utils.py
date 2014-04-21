@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from nose.tools import eq_
+from nose.tools import (
+    eq_,
+    raises,
+)
 from ..utils import (
     normalize_netloc,
     normalize_path,
@@ -12,6 +15,21 @@ from ..utils import (
 def test_normalize_url():
     eq_(normalize_url('http://a/b/c/%7Bfoo%7D'),
         normalize_url('hTTP://a/./b/../b/%63/%7bfoo%7d'))
+
+
+@raises(ValueError)
+def test_normalize_url_unknown_scheme():
+    normalize_url('example://example.com/')
+
+
+@raises(ValueError)
+def test_normalize_url_fragment():
+    normalize_url('http://example.com/#foo')
+
+
+@raises(ValueError)
+def test_normalize_url_invalid_port():
+    normalize_url('https://example.com:1bb/#foo')
 
 
 def test_normalize_netloc():
