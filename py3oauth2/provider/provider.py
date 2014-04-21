@@ -49,7 +49,11 @@ class AuthorizationProvider:
         if '?' in authorized_url:
             authorized_url = authorized_url.split('?', 1)[0]
 
-        return utils.normalize_url(redirect_uri).startswith(authorized_url)
+        redirect_uri = utils.normalize_url(redirect_uri)
+        if '?' in redirect_uri:
+            redirect_uri = authorized_url.split('?', 1)[0]
+
+        return authorized_url == redirect_uri
 
     def _generate_random_string(self, length):
         return utils.generate_random_string(
