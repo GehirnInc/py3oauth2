@@ -3,6 +3,11 @@
 import json
 import unittest
 
+from . import (
+    Request,
+    Response,
+)
+
 
 class TestParameter(unittest.TestCase):
 
@@ -203,3 +208,68 @@ class TestRequestErrorMeta(unittest.TestCase):
         self.target_class('cls', (RequestError, ), {
             'kind': Parameter(str),
         })
+
+
+class TestResponse(unittest.TestCase):
+
+    def test_is_redirect(self):
+        inst = Response(Request())
+        with self.assertRaises(NotImplementedError):
+            inst.is_redirect()
+
+    def test_get_redirect_to_code(self):
+        req = Request.from_dict({
+            'grant_type': 'test',
+            'response_type': 'code',
+        })
+        inst = Response.from_dict(req, {
+            'param': 'value',
+        })
+        inst.redirect_uri = 'http://example.com/cb'
+        inst.is_redirect = lambda: True
+
+        self.assertEqual(inst.get_redirect_to(),
+                         'http://example.com/cb?param=value')
+
+    def test_get_redirect_to_token(self):
+        req = Request.from_dict({
+            'grant_type': 'test',
+            'response_type': 'token',
+        })
+        inst = Response.from_dict(req, {
+            'param': 'value',
+        })
+        inst.redirect_uri = 'http://example.com/cb'
+        inst.is_redirect = lambda: True
+
+        self.assertEqual(inst.get_redirect_to(),
+                         'http://example.com/cb#param=value')
+
+    def test_get_redirect_to_response_mode(self):
+        req = Request.from_dict({
+            'grant_type': 'test',
+            'response_type': 'code',
+            'response_mode': 'fragment',
+        })
+        inst = Response.from_dict(req, {
+            'param': 'value',
+        })
+        inst.redirect_uri = 'http://example.com/cb'
+        inst.is_redirect = lambda: True
+
+        self.assertEqual(inst.get_redirect_to(),
+                         'http://example.com/cb#param=value')
+
+    def test_get_content_type(self):
+        inst = Response(Request.from_dict({
+            'grant_type': 'test',
+        }))
+        with self.assertRaises(NotImplementedError):
+            inst.get_content_type()
+
+    def test_get_response_body(self):
+        inst = Response(Request.from_dict({
+            'grant_type': 'test',
+        }))
+        with self.assertRaises(NotImplementedError):
+            inst.get_response_body()

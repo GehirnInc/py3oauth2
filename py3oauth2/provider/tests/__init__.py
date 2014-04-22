@@ -161,6 +161,8 @@ class Request(message.Request):
 
     grant_type = message.Parameter(str, required=True,
                                    default='test', editable=False)
+    response_type = message.Parameter(str)
+    response_mode = message.Parameter(str)
 
     def handle(self, provider, owner):
         return self.response(self)

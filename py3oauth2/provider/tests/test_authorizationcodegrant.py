@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 import unittest
 import uuid
 
@@ -17,7 +18,6 @@ from . import (
     Store,
 )
 from .. import utils
-from ..message import UnauthorizedClient
 
 
 class TestAuthorizationRequest(unittest.TestCase):
@@ -196,3 +196,31 @@ class TestAccessTokenRequest(unittest.TestCase):
         resp = req.answer(provider, self.owner)
         self.assertIsInstance(resp, req.err_response)
         self.assertEqual(resp.error, 'server_error')
+        self.assertFalse(resp.is_redirect())
+        self.assertEqual(resp.get_content_type(), 'text/json;charset=utf8')
+        self.assertEqual(
+            json.loads(resp.get_response_body()),
+            json.loads(resp.to_json()))
+
+    def test_answer(self):
+        provider = BlindAuthorizationProvider(self.store)
+
+        req = AccessTokenRequest.from_dict({
+            'grant_type': 'authorization_code',
+            'code': self.authcode.get_code(),
+            'client_id': self.client.get_id(),
+        })
+
+        resp = req.answer(provider, self.owner)
+        resp.validate()
+
+        self.assertIsInstance(resp, req.response)
+        token = self.store.get_access_token(resp.access_token)
+        self.assertIsNotNone(token)
+        self.assertEqual(len(token.get_token()),
+                         provider.store.get_access_token_length())
+        self.assertFalse(resp.is_redirect())
+        self.assertEqual(resp.get_content_type(), 'text/json;charset=utf8')
+        self.assertEqual(
+            json.loads(resp.get_response_body()),
+            json.loads(resp.to_json()))
