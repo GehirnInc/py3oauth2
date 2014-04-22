@@ -137,8 +137,15 @@ class Message(dict, metaclass=MessageMeta):
     def to_json(self):
         self.validate()
 
-        dct = dict((k, v) for k, v in self._to_dict().items() if v is not None)
+        dct = {k: v for k, v in self._to_dict().items() if v is not None}
         return json.dumps(dct)
+
+    def to_query_string(self):
+        self.validate()
+
+        return urlencode([
+            (k, v) for k, v in self._to_dict().items() if v is not None
+        ])
 
     def validate(self):
         for name, param in self.__msg_params__.items():
@@ -187,10 +194,12 @@ class Response(Message):
 
     def get_redirect_to(self):
         assert self.is_redirect()
-        assert hasattr(self.request, 'response_type')
+        assert hasattr(self.request, 'response_type')\
+            and self.request.response_type
         assert self.redirect_uri
 
-        if hasattr(self.request, 'response_mode'):
+        if hasattr(self.request, 'response_mode')\
+                and self.request.response_mode:
             is_fragment = self.request.response_mode == 'fragment'
         else:
             response_types = set(self.request.response_type.split())
@@ -198,13 +207,15 @@ class Response(Message):
 
         parsed = urlparse(self.redirect_uri)
         if is_fragment:
-            parsed.fragment = self.to_query_string()
+            query = parsed.query
+            fragment = self.to_query_string()
         else:
             query = parse_qsl(parsed.query)
             query.extend(parse_qsl(self.to_query_string()))
-            parsed.query = urlencode(query)
+            query = urlencode(query)
+            fragment = parsed.fragment
 
-        return urlunparse(parsed)
+        return urlunparse(parsed[:4] + (query, fragment))
 
     def get_content_type(self):
         raise NotImplementedError
