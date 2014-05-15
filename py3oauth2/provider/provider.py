@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import collections
 from datetime import (
     datetime,
     timedelta,
@@ -8,13 +9,13 @@ from datetime import (
 from . import (
     authorizationcodegrant,
     implicitgrant,
+    message,
     refreshtokengrant,
     utils,
 )
 from .exceptions import (
     AccessDenied,
     ErrorResponse,
-    UnknownRequest,
     ValidationError,
 )
 from .interfaces import ClientType
@@ -24,19 +25,42 @@ __all__ = ['AuthorizationProvider', 'ResourceProvider']
 
 
 class AuthorizationProvider:
-    requests = {
-        'grant_type': {
-            'refresh_token': refreshtokengrant.Request,
-            'authorization_code': authorizationcodegrant.AccessTokenRequest
-        },
-        'response_type': {
-            'code': authorizationcodegrant.AuthorizationRequest,
-            'token': implicitgrant.Request,
-        },
+    authz_handlers = {
+        ('token', ): implicitgrant.Request,
+        ('code', ): authorizationcodegrant.AuthorizationRequest,
     }
 
-    def __init__(self, store):
+    token_handlers = {
+        'refresh_token': refreshtokengrant.Request,
+        'authorization_code': authorizationcodegrant.AccessTokenRequest,
+    }
+
+    def __init__(self, store, **kwargs):
         self.store = store
+
+    @staticmethod
+    def normalize_response_type(response_type):
+        assert isinstance(response_type, collections.Iterable)
+
+        response_type = sorted(response_type)
+        response_type = tuple(type for i, type in enumerate(response_type)
+                              if response_type not in response_type[:i])
+        return response_type
+
+    @classmethod
+    def add_authorization_handler(cls, response_type, handler):
+        assert isinstance(response_type, tuple)
+        assert issubclass(handler, message.Request)
+
+        cls.authz_handlers[cls.normalize_response_type(response_type)]\
+            = handler
+
+    @classmethod
+    def add_token_handler(cls, grant_type, handler):
+        assert isinstance(grant_type, str)
+        assert issubclass(handler, message.Request)
+
+        cls.token_handlers[grant_type] = handler
 
     def authorize_client(self, client):
         raise NotImplementedError
@@ -73,39 +97,83 @@ class AuthorizationProvider:
         return self._generate_random_string(
             self.store.get_refresh_token_length())
 
-    def detect_request_class(self, request):
-        if 'grant_type' in request:
-            return self.requests['grant_type'].get(request['grant_type'])
-        elif 'response_type' in request:
-            return self.requests['response_type'].get(request['response_type'])
-
-        return None
-
-    def decode_request(self, request_dict):
-        request_class = self.detect_request_class(request_dict)
-        if request_class is None:
-            raise UnknownRequest()
+    def _decode_request(self, registry, key, request_dict, err_kind, state):
+        assert isinstance(registry, dict)
+        assert isinstance(request_dict, dict)
+        assert isinstance(err_kind, str)
 
         try:
-            request = request_class.from_dict(request_dict)
+            handler = registry[key]
+        except KeyError as why:
+            raise ErrorResponse(
+                self._err_response(request_dict, err_kind, state)) from why
+
+        request = handler.from_dict(request_dict)
+        try:
             request.validate()
-        except ValidationError as why:
-            resp = request_class.err_response(request)
-            resp.error = 'invalid_request'
-            raise ErrorResponse(resp) from why
-        else:
             return request
+        except BaseException as why:
+            if isinstance(why, ValidationError):
+                why = message.InvalidRequest()
+            elif not isinstance(why, message.RequestError):
+                why = message.ServerError()
+
+            raise ErrorResponse(
+                self._err_response(request, why.kind, state)) from why
+
+    def _err_response(self, request, err_kind, state):
+        return message.ErrorResponse.from_dict(request, {
+            'error': err_kind,
+            'state': state,
+        })
+
+    def decode_authorize_request(self, request_dict):
+        err_kind = 'unsupported_response_type'
+        state = request_dict.get('state')
+
+        response_type = request_dict.get('response_type')
+        if not isinstance(response_type, str):
+            raise ErrorResponse(self._err_response(
+                request_dict, err_kind, state))
+        response_type = self.normalize_response_type(response_type.split())
+
+        return self._decode_request(self.authz_handlers,
+                                    response_type,
+                                    request_dict,
+                                    err_kind,
+                                    state)
+
+    def decode_token_request(self, request_dict):
+        err_kind = 'unsupported_grant_type'
+        state = request_dict.get('state')
+
+        grant_type = request_dict.get('grant_type')
+        if not isinstance(grant_type, str):
+            raise ErrorResponse(self._err_response(
+                request_dict, err_kind, state))
+
+        return self._decode_request(self.token_handlers,
+                                    grant_type,
+                                    request_dict,
+                                    'unsupported_grant_type',
+                                    state)
 
     def handle_request(self, request, owner=None):
         try:
             resp = request.answer(self, owner)
             resp.validate()
-        except BaseException as why:
-            resp = request.err_response(request)
-            resp.error = 'server_error'
-            raise ErrorResponse(resp) from why
-        else:
+
             return resp
+        except BaseException as why:
+            if not isinstance(why, message.RequestError):
+                why = message.ServerError()
+
+            resp = request.err_response(request)
+            resp.error = why.kind
+            if hasattr(resp, 'state') and request.state:
+                resp.state = request.state
+
+            raise ErrorResponse(resp) from why
 
 
 class ResourceProvider:

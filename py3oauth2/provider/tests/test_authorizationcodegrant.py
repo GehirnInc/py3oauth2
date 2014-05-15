@@ -1,108 +1,97 @@
 # -*- coding: utf-8 -*-
 
+import contextlib
 import json
-import unittest
-import uuid
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
-from ..authorizationcodegrant import (
-    AccessTokenRequest,
-    AuthorizationRequest,
-)
-
-from . import (
-    BlindAuthorizationProvider,
-    BrokenAuthorizationProvider,
-    Client,
-    DummyAuthorizationProvider,
-    Owner,
-    Store,
-)
-from .. import utils
+from . import TestBase
 
 
-class TestAuthorizationRequest(unittest.TestCase):
+class TestAuthorizationRequest(TestBase):
 
     def setUp(self):
-        self.store = Store()
+        super().setUp()
 
-        self.client = Client(str(uuid.uuid4()))
-        self.store.persist_client(self.client)
+    @property
+    def target(self):
+        from ..authorizationcodegrant import AuthorizationRequest
+        return AuthorizationRequest
 
-        self.owner = Owner(str(uuid.uuid4()))
+    def test_answer_unauthorized_client(self):
+        from ..message import UnauthorizedClient
+        from ..provider import AuthorizationProvider
 
-    def test_answer_unauthorized_client_1(self):
-        provider = BlindAuthorizationProvider(self.store)
+        client = self.make_client()
+        req = self.target.from_dict({
+            'response_type': 'code',
+            'client_id': client.get_id(),
+        })
 
-        req = AuthorizationRequest.from_dict({
+        provider = AuthorizationProvider(self.store)
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                AuthorizationProvider, 'authorize_client', return_value=False))
+            stack.enter_context(self.assertRaises(UnauthorizedClient))
+
+            req.answer(provider, self.owner)
+
+    def test_answer_unauthorized_client_unregistered(self):
+        from ..message import UnauthorizedClient
+        from ..provider import AuthorizationProvider
+
+        provider = AuthorizationProvider(self.store)
+
+        req = self.target.from_dict({
             'response_type': 'code',
             'client_id': 'unknown_client_id',
         })
 
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, AuthorizationRequest.err_response)
-        self.assertEqual(resp.error, 'unauthorized_client')
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                AuthorizationProvider, 'authorize_client', return_value=True))
+            stack.enter_context(self.assertRaises(UnauthorizedClient))
 
-    def test_answer_unauthorized_client_2(self):
-        provider = DummyAuthorizationProvider(self.store)
+            req.answer(provider, self.owner)
 
-        req = AuthorizationRequest.from_dict({
+    def test_answer_unauthorized_client_redirect_uri_notmatched(self):
+        from ..message import UnauthorizedClient
+        from ..provider import AuthorizationProvider
+
+        client = self.make_client(redirect_uri='https://example.com/cb')
+        self.store.persist_client(client)
+
+        provider = AuthorizationProvider(self.store)
+        req = self.target.from_dict({
             'response_type': 'code',
-            'client_id': self.client.get_id(),
+            'client_id': client.get_id(),
+            'redirect_uri': 'https://example.com/unknown_cb'
         })
 
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, AuthorizationRequest.err_response)
-        self.assertEqual(resp.error, 'unauthorized_client')
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                AuthorizationProvider, 'authorize_client', return_value=True))
+            stack.enter_context(self.assertRaises(UnauthorizedClient))
 
-    def test_answer_unauthorized_client_3(self):
-        provider = BlindAuthorizationProvider(self.store)
-
-        req = AuthorizationRequest.from_dict({
-            'response_type': 'code',
-            'client_id': self.client.get_id(),
-            'redirect_uri': 'http://example.com/cb/2'
-        })
-
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, AuthorizationRequest.err_response)
-        self.assertEqual(resp.error, 'unauthorized_client')
-
-    def test_answer_invalid_request(self):
-        provider = BlindAuthorizationProvider(self.store)
-        self.client.get_redirect_uri = lambda: None
-
-        req = AuthorizationRequest.from_dict({
-            'response_type': 'code',
-            'client_id': self.client.get_id(),
-        })
-
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, AuthorizationRequest.err_response)
-        self.assertEqual(resp.error, 'invalid_request')
-
-    def test_answer_server_error(self):
-        provider = BrokenAuthorizationProvider(self.store)
-
-        req = AuthorizationRequest.from_dict({
-            'response_type': 'code',
-            'client_id': self.client.get_id(),
-        })
-
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, req.err_response)
-        self.assertEqual(resp.error, 'server_error')
-        self.assertTrue(resp.is_redirect())
+            req.answer(provider, self.owner)
 
     def test_answer(self):
-        provider = BlindAuthorizationProvider(self.store)
+        from ..provider import AuthorizationProvider
+        provider = AuthorizationProvider(self.store)
+        client = self.make_client()
 
-        req = AuthorizationRequest.from_dict({
+        req = self.target.from_dict({
             'response_type': 'code',
-            'client_id': self.client.get_id(),
+            'client_id': client.get_id(),
             'state': 'state',
         })
 
-        resp = req.answer(provider, self.owner)
+        with mock.patch.object(
+                AuthorizationProvider, 'authorize_client', return_value=True):
+            resp = req.answer(provider, self.owner)
+
         resp.validate()
 
         self.assertIsInstance(resp, req.response)
@@ -113,105 +102,117 @@ class TestAuthorizationRequest(unittest.TestCase):
         self.assertTrue(resp.is_redirect())
 
 
-class TestAccessTokenRequest(unittest.TestCase):
+class TestAccessTokenRequest(TestBase):
 
     def setUp(self):
-        self.store = Store()
+        super().setUp()
 
-        self.client = Client(str(uuid.uuid4()))
-        self.store.persist_client(self.client)
+    @property
+    def target(self):
+        from ..authorizationcodegrant import AccessTokenRequest
+        return AccessTokenRequest
 
-        self.owner = Owner(str(uuid.uuid4()))
+    def test_answer_access_denied_unknown_code(self):
+        from ..message import AccessDenied
+        from ..provider import AuthorizationProvider
 
-        self.authcode = self.store.persist_authorization_code(
-            self.client, self.owner,
-            utils.generate_random_string(
-                self.store.get_authorization_code_length(),
-                utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS
-            ),
-            None,
-        )
-
-    def test_answer_access_denied_1(self):
-        req = AccessTokenRequest.from_dict({
+        client = self.make_client()
+        req = self.target.from_dict({
             'grant_type': 'authorization_code',
             'code': 'unknown_authorization_code',
-            'client_id': self.client.get_id(),
+            'client_id': client.get_id(),
         })
 
-        provider = BlindAuthorizationProvider(self.store)
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, req.err_response)
-        self.assertEqual(resp.error, 'access_denied')
+        provider = AuthorizationProvider(self.store)
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                AuthorizationProvider, 'authorize_client', return_value=True))
+            stack.enter_context(self.assertRaises(AccessDenied))
 
-    def test_answer_access_denied_2(self):
-        provider = BlindAuthorizationProvider(self.store)
-        self.authcode.mark_as_used()
+            req.answer(provider, self.owner)
 
-        req = AccessTokenRequest.from_dict({
+    def test_answer_access_denied_used_code(self):
+        from ..message import AccessDenied
+        from ..provider import AuthorizationProvider
+
+        provider = AuthorizationProvider(self.store)
+
+        client = self.make_client()
+        owner = self.make_owner()
+        authcode = self.make_authcode(client, owner)
+        authcode.mark_as_used()
+
+        req = self.target.from_dict({
             'grant_type': 'authorization_code',
-            'code': self.authcode.get_code(),
-            'client_id': self.client.get_id(),
+            'code': authcode.get_code(),
+            'client_id': client.get_id(),
         })
 
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, req.err_response)
-        self.assertEqual(resp.error, 'access_denied')
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                provider, 'authorize_client', return_value=True))
+            stack.enter_context(self.assertRaises(AccessDenied))
 
-    def test_answer_unauthorized_client_1(self):
-        provider = BlindAuthorizationProvider(self.store)
+            req.answer(provider, self.owner)
 
-        req = AccessTokenRequest.from_dict({
+    def test_answer_unauthorized_client_unregistered(self):
+        from ..message import UnauthorizedClient
+        from ..provider import AuthorizationProvider
+
+        provider = AuthorizationProvider(self.store)
+        authcode = self.make_authcode(self.make_client(), self.make_owner())
+
+        req = self.target.from_dict({
             'grant_type': 'authorization_code',
-            'code': self.authcode.get_code(),
+            'code': authcode.get_code(),
             'client_id': 'unknown_client_id',
         })
 
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, req.err_response)
-        self.assertEqual(resp.error, 'unauthorized_client')
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                provider, 'authorize_client', return_value=True))
+            stack.enter_context(self.assertRaises(UnauthorizedClient))
 
-    def test_answer_unauthorized_client_2(self):
-        provider = DummyAuthorizationProvider(self.store)
+            req.answer(provider, self.owner)
 
-        req = AccessTokenRequest.from_dict({
+    def test_answer_unauthorized_client(self):
+        from ..message import UnauthorizedClient
+        from ..provider import AuthorizationProvider
+
+        client = self.make_client()
+        authcode = self.make_authcode(client, self.make_owner())
+
+        provider = AuthorizationProvider(self.store)
+        req = self.target.from_dict({
             'grant_type': 'authorization_code',
-            'code': self.authcode.get_code(),
-            'client_id': self.client.get_id(),
+            'code': authcode.get_code(),
+            'client_id': client.get_id(),
         })
 
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, req.err_response)
-        self.assertEqual(resp.error, 'unauthorized_client')
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(
+                provider, 'authorize_client', return_value=False))
+            stack.enter_context(self.assertRaises(UnauthorizedClient))
 
-    def test_answer_server_error(self):
-        provider = BrokenAuthorizationProvider(self.store)
-
-        req = AccessTokenRequest.from_dict({
-            'grant_type': 'authorization_code',
-            'code': self.authcode.get_code(),
-            'client_id': self.client.get_id(),
-        })
-
-        resp = req.answer(provider, self.owner)
-        self.assertIsInstance(resp, req.err_response)
-        self.assertEqual(resp.error, 'server_error')
-        self.assertFalse(resp.is_redirect())
-        self.assertEqual(resp.get_content_type(), 'text/json;charset=utf8')
-        self.assertEqual(
-            json.loads(resp.get_response_body()),
-            json.loads(resp.to_json()))
+            req.answer(provider, self.owner)
 
     def test_answer(self):
-        provider = BlindAuthorizationProvider(self.store)
+        from ..provider import AuthorizationProvider
 
-        req = AccessTokenRequest.from_dict({
+        client = self.make_client()
+        owner = self.make_owner()
+        authcode = self.make_authcode(client, owner)
+
+        provider = AuthorizationProvider(self.store)
+        req = self.target.from_dict({
             'grant_type': 'authorization_code',
-            'code': self.authcode.get_code(),
-            'client_id': self.client.get_id(),
+            'code': authcode.get_code(),
+            'client_id': client.get_id(),
         })
 
-        resp = req.answer(provider, self.owner)
+        with mock.patch.object(provider, 'authorize_client',
+                               return_value=True):
+            resp = req.answer(provider, self.owner)
         resp.validate()
 
         self.assertIsInstance(resp, req.response)

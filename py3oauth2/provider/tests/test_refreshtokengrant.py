@@ -1,26 +1,25 @@
 # -*- coding: utf-8 -*-
 
 import uuid
-import unittest
 
 from . import (
     BlindAuthorizationProvider,
     BrokenAuthorizationProvider,
-    Client,
     DummyAuthorizationProvider,
     Owner,
     Store,
+    TestBase,
 )
 from .. import utils
 from ..refreshtokengrant import RefreshTokenRequest
 
 
-class TestRefreshTokenRequest(unittest.TestCase):
+class TestRefreshTokenRequest(TestBase):
 
     def setUp(self):
         self.store = Store()
 
-        self.client = Client(str(uuid.uuid4()))
+        self.client = self.make_client()
         self.store.persist_client(self.client)
 
         self.owner = Owner(str(uuid.uuid4()))

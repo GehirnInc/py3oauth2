@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import unittest
+import uuid
 from datetime import datetime
 
+from .. import utils
 from ..interfaces import (
     ClientType,
     IAccessToken,
@@ -24,17 +27,19 @@ class Owner:
 
 class Client(IClient):
 
-    def __init__(self, id):
+    def __init__(self, id, redirect_uri, type):
         self.id = id
+        self.redirect_uri = redirect_uri
+        self.type = type
 
     def get_id(self):
         return self.id
 
     def get_redirect_uri(self):
-        return 'http://example.com/cb'
+        return self.redirect_uri
 
     def get_type(self):
-        return ClientType.CONFIDENTIAL
+        return self.type
 
 
 class AccessToken(IAccessToken):
@@ -173,7 +178,7 @@ class BlindAuthorizationProvider(AuthorizationProvider):
     def __init__(self, store):
         super(BlindAuthorizationProvider, self).__init__(store)
 
-        self.requests['grant_type']['test'] = Request
+        self.add_token_handler('test', Request)
 
     def authorize_client(self, client):
         return True
@@ -200,3 +205,33 @@ class DummyResourceProvider(ResourceProvider):
 
     def get_access_token(self):
         return (self.token, self.token_type)
+
+
+class TestBase(unittest.TestCase):
+
+    def setUp(self):
+        self.store = Store()
+        self.owner = Owner(str(uuid.uuid4()))
+
+    def make_client(self, id=lambda: str(uuid.uuid4()),
+                    redirect_uri='https://example.com/cb',
+                    type=ClientType.CONFIDENTIAL):
+        if callable(id):
+            id = id()
+
+        client = Client(id, redirect_uri, type)
+        self.store.persist_client(client)
+        return client
+
+    def make_authcode(self, client, owner):
+        return self.store.persist_authorization_code(
+            client, owner,
+            utils.generate_random_string(
+                self.store.get_authorization_code_length(),
+                utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS
+            ),
+            None,
+        )
+
+    def make_owner(self):
+        return Owner(str(uuid.uuid4()))

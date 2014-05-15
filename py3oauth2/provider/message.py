@@ -305,5 +305,5 @@ class ServerError(RequestError):
     kind = Parameter(str, default='server_error', editable=False)
 
 
-class InvalidRequet(RequestError):
+class InvalidRequest(RequestError):
     kind = Parameter(str, default='invalid_request', editable=False)
