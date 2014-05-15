@@ -60,11 +60,12 @@ class TestVariable(unittest.TestCase):
     def setUp(self):
         from ..message import (
             Message,
+            MessageMeta,
             Parameter,
         )
         self.foo = Parameter(str)
         self.bar = Parameter(str, default='hoge')
-        self.msg = type('cls', (Message, ), {
+        self.msg = MessageMeta('cls', (Message, ), {
             'foo': self.foo,
             'bar': self.bar,
         })
@@ -132,12 +133,6 @@ class TestMessageMeta(unittest.TestCase):
         foo = Parameter(str)
         bar = Parameter(str, editable=False)
         cls = MessageMeta('cls', (), {
-            'foo': foo,
-            'bar': bar,
-        })
-
-        self.assertTrue(hasattr(cls, '__msg_params__'))
-        self.assertEqual(cls.__msg_params__, {
             'foo': foo,
             'bar': bar,
         })

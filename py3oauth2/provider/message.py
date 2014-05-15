@@ -105,15 +105,11 @@ class Constant(Variable):
 class MessageMeta(type):
 
     def __new__(cls, name, bases, namespace):
-        params = {}
         for k, v in namespace.items():
             if not isinstance(v, Parameter):
                 continue
 
-            params[k] = v
             namespace[k] = v.new(k)
-        else:
-            namespace['__msg_params__'] = params
 
         return super(MessageMeta, cls).__new__(cls, name, bases, namespace)
 
@@ -128,9 +124,18 @@ class Message(dict, metaclass=MessageMeta):
 
     def _to_dict(self):
         dct = self.copy()
-        dct.update((
-            k, getattr(self, k)
-        ) for k in self.__msg_params__.keys())
+        for cls in self.__class__.__mro__:
+            if not isinstance(cls, MessageMeta):
+                continue
+
+            for key in vars(cls):
+                if key in dct:
+                    continue
+
+                value = getattr(cls, key)
+                if not isinstance(value, Parameter):
+                    continue
+                dct[key] = getattr(self, key)
 
         return dct
 
@@ -148,15 +153,25 @@ class Message(dict, metaclass=MessageMeta):
         ])
 
     def validate(self):
-        for name, param in self.__msg_params__.items():
-            param.validate(self, name, getattr(self, name))
+        for cls in self.__class__.__mro__:
+            if not isinstance(cls, MessageMeta):
+                continue
+
+            for key in vars(cls):
+                value = getattr(cls, key)
+                if not isinstance(value, Parameter) or\
+                        getattr(self.__class__, key) is not value:
+                    continue
+
+                value.validate(self, key, getattr(self, key))
 
         return True
 
     def _from_dict(self, D):
         for k, v in D.items():
-            if k in self.__msg_params__:
-                param = self.__msg_params__[k]
+            if hasattr(self, k)\
+                    and isinstance(getattr(self.__class__, k), Parameter):
+                param = getattr(self.__class__, k)
                 if param.editable:
                     setattr(self, k, v)
                 elif param.default == v:
