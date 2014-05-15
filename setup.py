@@ -18,6 +18,13 @@ except ImportError:
 else:
     del enum
 
+try:
+    from unittest import mock
+except ImportError:
+    tests_require.append('mock')
+else:
+    del mock
+
 
 def _read(name):
     try:
@@ -29,7 +36,7 @@ license = _read("LICENSE.rst")
 
 setup(
     name='py3oauth2',
-    version='0.1.3',
+    version='0.2.1',
     test_suite='py3oauth2',
     author='Kohei YOSHIDA',
     author_email='kohei.yoshida@gehirn.co.jp',
