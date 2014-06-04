@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from py3oauth2 import message
+from py3oauth2.errors import (
+    InvalidRequest,
+    UnauthorizedClient,
+)
 from py3oauth2.interfaces import IClient
 
-__all__ = ['Response', 'ErrorResponse', 'Request']
-
-
-def is_state_required(self):
-    return hasattr(self.request, 'state') and self.request.state is not None
+__all__ = ['Response', 'Request']
 
 
 class Response(message.Response):
@@ -15,23 +15,14 @@ class Response(message.Response):
     token_type = message.Parameter(str, required=True)
     expires_in = message.Parameter(int)
     scope = message.Parameter(str)
-    state = message.Parameter(str, is_state_required)
+    state = message.Parameter(str, message.is_state_required)
 
     def is_redirect(self):
         return True
 
 
-class ErrorResponse(message.Response):
-
-    error = message.Parameter(str, required=True)
-    error_descritpion = message.Parameter(str)
-    error_uri = message.Parameter(str)
-    state = message.Parameter(str, is_state_required)
-
-
 class Request(message.Request):
     response = Response
-    err_response = ErrorResponse
 
     response_type = message.Parameter(str, required=True,
                                       default='token', editable=False)
@@ -44,14 +35,14 @@ class Request(message.Request):
         client = provider.store.get_client(self.client_id)
         if not isinstance(client, IClient)\
                 or not provider.authorize_client(client):
-            raise message.UnauthorizedClient
+            raise UnauthorizedClient
 
         redirect_uri = self.redirect_uri if self.redirect_uri\
             else client.get_redirect_uri()
         if not redirect_uri:
-            raise message.InvalidRequest()
+            raise InvalidRequest()
         elif not provider.validate_redirect_uri(client, redirect_uri):
-            raise message.UnauthorizedClient()
+            raise UnauthorizedClient()
 
         token = provider.store.issue_access_token(
             client, owner, provider.normalize_scope(self.scope))

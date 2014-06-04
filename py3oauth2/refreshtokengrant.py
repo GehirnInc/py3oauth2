@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from py3oauth2.message import (
+from py3oauth2.errors import (
     AccessDenied,
+    UnauthorizedClient,
+)
+from py3oauth2.message import (
     AccessTokenResponse,
-    ErrorResponse,
     Parameter,
     Request,
-    UnauthorizedClient,
 )
 
 
@@ -15,7 +16,6 @@ __all__ = ['RefreshTokenRequest']
 
 class RefreshTokenRequest(Request):
     response = AccessTokenResponse
-    err_response = ErrorResponse
 
     grant_type = Parameter(str, required=True,
                            default='refresh_token', editable=False)

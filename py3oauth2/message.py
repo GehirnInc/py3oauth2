@@ -90,7 +90,6 @@ class Constant(Variable):
         if inst is None:
             return self.param
 
-        assert isinstance(inst, (Message, RequestError))
         return self.param.default
 
     def __set__(self, inst, value):
@@ -189,20 +188,14 @@ class Message(dict, metaclass=MessageMeta):
         return inst
 
 
-class Request(Message):
-    response = None
-    err_response = None
-
-    def answer(self, provider, owner):
-        raise NotImplementedError
+def is_state_required(self):
+    return hasattr(self.request, 'state') and self.request.state is not None
 
 
 class Response(Message):
 
-    def __init__(self, request, *args, **kwargs):
-        super(Response, self).__init__(self, *args, **kwargs)
+    def __init__(self, request):
         self.request = request
-        self.__redirect_uri = None
 
     def is_redirect(self):
         raise NotImplementedError
@@ -238,14 +231,6 @@ class Response(Message):
     def get_response_body(self):
         raise NotImplementedError
 
-    @property
-    def redirect_uri(self):
-        return self.__redirect_uri
-
-    @redirect_uri.setter
-    def redirect_uri(self, redirect_uri):
-        self.__redirect_uri = redirect_uri
-
     @classmethod
     def from_dict(cls, request, D):
         inst = cls(request)
@@ -274,6 +259,7 @@ class ErrorResponse(Response):
     error = Parameter(str, required=True)
     error_descritpion = Parameter(str)
     error_uri = Parameter(str)
+    state = Parameter(str, required=is_state_required)
 
     def is_redirect(self):
         return False
@@ -285,40 +271,9 @@ class ErrorResponse(Response):
         return self.to_json()
 
 
-class RequestErrorMeta(type):
+class Request(Message):
+    response = None
+    err_response = ErrorResponse
 
-    def __new__(cls, name, bases, namespace):
-        if not isinstance(bases, tuple):
-            bases = (bases, )
-
-        if any(base.__name__ == 'RequestError' for base in bases):
-            if 'kind' not in namespace:
-                raise AttributeError(
-                    'Subclasses of RequestError must have a property `kind`')
-            elif not isinstance(namespace['kind'], Parameter):
-                raise AttributeError(
-                    '`kind` must be a instance of provider.message.Parameter')
-
-            namespace['kind'] = namespace['kind'].new('kind')
-
-        return super(RequestErrorMeta, cls).__new__(cls, name, bases,
-                                                    namespace)
-
-
-RequestError = RequestErrorMeta('RequestError', (ValueError, ), {})
-
-
-class AccessDenied(RequestError):
-    kind = Parameter(str, default='access_denied', editable=False)
-
-
-class UnauthorizedClient(RequestError):
-    kind = Parameter(str, default='unauthorized_client', editable=False)
-
-
-class ServerError(RequestError):
-    kind = Parameter(str, default='server_error', editable=False)
-
-
-class InvalidRequest(RequestError):
-    kind = Parameter(str, default='invalid_request', editable=False)
+    def answer(self, provider, owner):
+        raise NotImplementedError

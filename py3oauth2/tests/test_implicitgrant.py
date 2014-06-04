@@ -16,7 +16,7 @@ class TestRequest(TestBase):
         return Request
 
     def test_answer_unauthorized_client_unregistered(self):
-        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.errors import UnauthorizedClient
         from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
@@ -32,7 +32,7 @@ class TestRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client(self):
-        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.errors import UnauthorizedClient
         from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
@@ -49,7 +49,7 @@ class TestRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_invalid_request(self):
-        from py3oauth2.message import InvalidRequest
+        from py3oauth2.errors import InvalidRequest
         from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
@@ -69,7 +69,7 @@ class TestRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client_redirect_uri_notmatched(self):
-        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.errors import UnauthorizedClient
         from py3oauth2.provider import AuthorizationProvider
 
         client = self.make_client('https://example.com/cb')

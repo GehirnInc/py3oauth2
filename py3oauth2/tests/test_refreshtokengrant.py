@@ -29,7 +29,7 @@ class TestRefreshTokenRequest(TestBase):
                                                           {'view', 'write'})
 
     def test_answer_access_denied(self):
-        from py3oauth2.message import AccessDenied
+        from py3oauth2.errors import AccessDenied
 
         req = RefreshTokenRequest.from_dict({
             'grant_type': 'refresh_token',
@@ -41,7 +41,7 @@ class TestRefreshTokenRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client(self):
-        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.errors import UnauthorizedClient
         from py3oauth2.provider import AuthorizationProvider
 
         req = RefreshTokenRequest.from_dict({
@@ -76,7 +76,7 @@ class TestRefreshTokenRequest(TestBase):
                          token.get_scope())
 
     def test_answer_invalid_scope_1(self):
-        from py3oauth2.message import AccessDenied
+        from py3oauth2.errors import AccessDenied
 
         provider = BlindAuthorizationProvider(self.store)
 
@@ -89,7 +89,7 @@ class TestRefreshTokenRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_invalid_scope_2(self):
-        from py3oauth2.message import AccessDenied
+        from py3oauth2.errors import AccessDenied
 
         access_token = self.store.issue_access_token(self.client,
                                                      self.owner,

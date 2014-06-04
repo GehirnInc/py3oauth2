@@ -103,12 +103,12 @@ class AuthorizationProvider:
             return request
         except BaseException as why:
             if isinstance(why, ValidationError):
-                why = message.InvalidRequest()
+                kind = 'invalid_request'
             else:
-                why = message.ServerError()
+                kind = 'server_error'
 
             raise ErrorResponse(
-                self._err_response(request, why.kind, state)) from why
+                self._err_response(request, kind, state)) from why
 
     def _err_response(self, request, err_kind, state):
         return message.ErrorResponse.from_dict(request, {
@@ -122,8 +122,9 @@ class AuthorizationProvider:
 
         response_type = request_dict.get('response_type')
         if not isinstance(response_type, str):
-            raise ErrorResponse(self._err_response(
-                request_dict, err_kind, state))
+            raise ErrorResponse(self._err_response(request_dict,
+                                                   err_kind,
+                                                   state))
         response_type = self.normalize_response_type(response_type.split())
 
         return self._decode_request(self.authz_handlers,
@@ -137,10 +138,6 @@ class AuthorizationProvider:
         state = request_dict.get('state')
 
         grant_type = request_dict.get('grant_type')
-        if not isinstance(grant_type, str):
-            raise ErrorResponse(self._err_response(
-                request_dict, err_kind, state))
-
         return self._decode_request(self.token_handlers,
                                     grant_type,
                                     request_dict,

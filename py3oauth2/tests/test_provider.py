@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import contextlib
 import uuid
 
 from py3oauth2.exceptions import (
@@ -8,6 +9,7 @@ from py3oauth2.exceptions import (
 from py3oauth2.interfaces import ClientType
 from py3oauth2.tests import (
     Store,
+    mock,
     TestBase,
 )
 
@@ -110,51 +112,16 @@ class AuthorizationProviderTest(TestBase):
         ))
 
     def test_decode_authorize_request(self):
-        from py3oauth2 import authorizationcodegrant
         client = self.make_client()
 
         inst = self.make_target(self.store)
-        ret = inst.decode_authorize_request({
+        resp = inst.decode_authorize_request({
             'response_type': 'code',
+            'state': 'statestring',
             'client_id': client.id,
         })
 
-        self.assertIsInstance(ret, authorizationcodegrant.AuthorizationRequest)
-        self.assertEqual(ret.response_type, 'code')
-        self.assertEqual(ret.client_id, client.id)
-
-    def test_decode_authorize_request_unsupported(self):
-        client = self.make_client()
-
-        inst = self.make_target(self.store)
-        try:
-            inst.decode_authorize_request({
-                'response_type': 'code token',
-                'client_id': client.id,
-            })
-        except ErrorResponse as why:
-            resp = why.response
-            self.assertEqual(resp.error, 'unsupported_response_type')
-        else:
-            self.fail()
-
-    def test_decode_authorize_request_unsupported_with_state(self):
-        client = self.make_client()
-
-        state = str(uuid.uuid4())
-        inst = self.make_target(self.store)
-        try:
-            inst.decode_authorize_request({
-                'response_type': 'code token',
-                'client_id': client.id,
-                'state': state,
-            })
-        except ErrorResponse as why:
-            resp = why.response
-            self.assertEqual(resp.error, 'unsupported_response_type')
-            self.assertEqual(resp.get('state'), state)
-        else:
-            self.fail()
+        self.assertIsInstance(resp, inst.authz_handlers[('code', )])
 
     def test_decode_authorize_request_unsupported_missing(self):
         # NOTES: missing `response_type`
@@ -170,28 +137,11 @@ class AuthorizationProviderTest(TestBase):
         except ErrorResponse as why:
             resp = why.response
             self.assertEqual(resp.error, 'unsupported_response_type')
-            self.assertEqual(resp.get('state'), state)
-        else:
-            self.fail()
-
-    def test_decode_authorize_request_invalid(self):
-        # NOTES: missing `client_id`
-        state = str(uuid.uuid4())
-        inst = self.make_target(self.store)
-        try:
-            inst.decode_authorize_request({
-                'response_type': 'code',
-                'state': state,
-            })
-        except ErrorResponse as why:
-            resp = why.response
-            self.assertEqual(resp.error, 'invalid_request')
-            self.assertEqual(resp.get('state'), state)
+            self.assertEqual(resp.state, state)
         else:
             self.fail()
 
     def test_decode_token_request(self):
-        from py3oauth2 import authorizationcodegrant
         client = self.make_client()
 
         inst = self.make_target(self.store)
@@ -201,47 +151,78 @@ class AuthorizationProviderTest(TestBase):
             'code': 'authorizationcode',
         })
 
-        self.assertIsInstance(ret, authorizationcodegrant.AccessTokenRequest)
-        self.assertEqual(ret.grant_type, 'authorization_code')
+        self.assertIsInstance(ret, inst.token_handlers['authorization_code'])
 
-    def test_decode_token_request_unsupported(self):
+    def test_decode_request_unsupported(self):
         inst = self.make_target(self.store)
-        try:
-            inst.decode_token_request({
-                'grant_type': 'unknown_grant_type',
-            })
-        except ErrorResponse as why:
-            resp = why.response
-            self.assertEqual(resp.error, 'unsupported_grant_type')
-        else:
-            self.fail()
 
-    def test_decode_token_request_unsupported_with_state(self):
-        state = str(uuid.uuid4())
-        inst = self.make_target(self.store)
-        try:
-            inst.decode_token_request({
-                'grant_type': 'unknown_grant_type',
-                'state': state,
-            })
-        except ErrorResponse as why:
-            resp = why.response
-            self.assertEqual(resp.error, 'unsupported_grant_type')
-            self.assertEqual(resp.get('state'), state)
-        else:
-            self.fail()
+        with contextlib.ExitStack() as stack:
+            response = object()
+            err_response =\
+                stack.enter_context(mock.patch.object(inst, '_err_response',
+                                                      return_value=response))
 
-    def test_decode_token_request_unsupported_missing(self):
-        # NOTES: missing `grant_type`
-        state = str(uuid.uuid4())
+            try:
+                request_dict = dict()
+                inst._decode_request({}, object(), request_dict,
+                                     'somerror', 'statestring')
+            except ErrorResponse as why:
+                err_response.assert_called_once_with(request_dict,
+                                                     'somerror',
+                                                     'statestring')
+                self.assertIs(why.response, response)
+            else:
+                self.fail()
+
+    def test_decode_request_validation_error(self):
+        from py3oauth2.message import ValidationError
+
         inst = self.make_target(self.store)
-        try:
-            inst.decode_token_request({
-                'state': state,
-            })
-        except ErrorResponse as why:
-            resp = why.response
-            self.assertEqual(resp.error, 'unsupported_grant_type')
-            self.assertEqual(resp.get('state'), state)
-        else:
-            self.fail()
+        with contextlib.ExitStack() as stack:
+            response = object()
+            err_response =\
+                stack.enter_context(mock.patch.object(inst, '_err_response',
+                                                      return_value=response))
+            request = mock.Mock()
+            request.validate.side_effect = ValidationError
+
+            handler = mock.Mock()
+            handler.from_dict.return_value = request
+
+            try:
+                inst._decode_request({'key': handler}, 'key', {},
+                                     'somerror', 'statestring')
+            except ErrorResponse as why:
+                err_response.assert_called_once_with(request,
+                                                     'invalid_request',
+                                                     'statestring')
+                self.assertIs(why.response, response)
+            else:
+                self.fail()
+
+    def test_decode_request_server_error(self):
+        # NOTES: for example, message parameter's required method
+        #        raises exception
+
+        inst = self.make_target(self.store)
+        with contextlib.ExitStack() as stack:
+            response = object()
+            err_response =\
+                stack.enter_context(mock.patch.object(inst, '_err_response',
+                                                      return_value=response))
+            request = mock.Mock()
+            request.validate.side_effect = Exception()
+
+            handler = mock.Mock()
+            handler.from_dict.return_value = request
+
+            try:
+                inst._decode_request({'key': handler}, 'key', {},
+                                     'somerror', 'statestring')
+            except ErrorResponse as why:
+                err_response.assert_called_once_with(request,
+                                                     'server_error',
+                                                     'statestring')
+                self.assertIs(why.response, response)
+            else:
+                self.fail()

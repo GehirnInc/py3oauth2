@@ -31,7 +31,6 @@ class Response(message.Response):
 
 class Request(message.Request):
     response = Response
-    err_response = message.ErrorResponse
 
     grant_type = message.Parameter(str, required=True,
                                    default='test', editable=False)
