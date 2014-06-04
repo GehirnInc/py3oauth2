@@ -36,7 +36,7 @@ license = _read("LICENSE.rst")
 
 setup(
     name='py3oauth2',
-    version='0.2.2',
+    version='0.3.1',
     test_suite='py3oauth2',
     author='Kohei YOSHIDA',
     author_email='kohei.yoshida@gehirn.co.jp',
@@ -48,7 +48,7 @@ setup(
     install_requires=requires,
     tests_require=tests_require,
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
