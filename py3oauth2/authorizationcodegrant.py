@@ -9,8 +9,11 @@ from py3oauth2.errors import (
 from py3oauth2.interfaces import IClient
 
 
-__all__ = ['AuthorizationResponse', 'AuthorizationErrorResponse',
-           'AuthorizationRequest', 'AccessTokenRequest']
+__all__ = [
+    'AuthorizationResponse',
+    'AuthorizationRequest',
+    'AccessTokenRequest'
+]
 
 
 class AuthorizationResponse(message.Response):
@@ -21,15 +24,8 @@ class AuthorizationResponse(message.Response):
         return True
 
 
-class AuthorizationErrorResponse(message.ErrorResponse):
-
-    def is_redirect(self):
-        return True
-
-
 class AuthorizationRequest(message.Request):
     response = AuthorizationResponse
-    err_response = AuthorizationErrorResponse
 
     response_type = message.Parameter(str, required=True,
                                       default='code', editable=False)
@@ -42,13 +38,13 @@ class AuthorizationRequest(message.Request):
         client = provider.store.get_client(self.client_id)
         if not isinstance(client, IClient)\
                 or not provider.authorize_client(client):
-            raise UnauthorizedClient
+            raise UnauthorizedClient(self, True)
 
         redirect_uri = self.redirect_uri or client.get_redirect_uri()
         if not redirect_uri:
-            raise InvalidRequest()
+            raise InvalidRequest(self, True)
         elif not provider.validate_redirect_uri(client, redirect_uri):
-            raise UnauthorizedClient()
+            raise UnauthorizedClient(self, True)
 
         code = provider.store.issue_authorization_code(
             client, owner, provider.normalize_scope(self.scope))
@@ -76,13 +72,13 @@ class AccessTokenRequest(message.Request):
             # the authorization server MUST deny the request and SHOULD
             # revoke (when possible) all tokens previously issued
             # based on that authorization code.
-            raise AccessDenied()
+            raise AccessDenied(self)
 
         client = provider.store.get_client(self.client_id)
         if not isinstance(client, IClient)\
                 or not provider.authorize_client(client)\
                 or client != authcode.get_client():
-            raise UnauthorizedClient
+            raise UnauthorizedClient(self)
 
         token = provider.store.issue_access_token(authcode.get_client(),
                                                   authcode.get_owner(),

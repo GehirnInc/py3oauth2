@@ -15,6 +15,7 @@ from examples.models import (
 )
 
 from py3oauth2 import message
+from py3oauth2.errors import make_error
 from py3oauth2.interfaces import ClientType
 from py3oauth2.provider import (
     AuthorizationProvider,
@@ -23,6 +24,9 @@ from py3oauth2.provider import (
 
 
 __all__ = ['mock']
+
+
+DummyError = make_error('DummyError', 'dummy_error')
 
 
 class Response(message.Response):

@@ -1,42 +1,73 @@
 # -*- coding: utf-8 -*-
 
-
-from py3oauth2.message import Parameter
-
-
-class RequestErrorMeta(type):
-
-    def __new__(cls, name, bases, namespace):
-        if not isinstance(bases, tuple):
-            bases = (bases, )
-
-        if any(base.__name__ == 'RequestError' for base in bases):
-            if 'kind' not in namespace:
-                raise AttributeError(
-                    'Subclasses of RequestError must have a property `kind`')
-            elif not isinstance(namespace['kind'], Parameter):
-                raise AttributeError(
-                    '`kind` must be a instance of provider.message.Parameter')
-
-            namespace['kind'] = namespace['kind'].new('kind')
-
-        return super(RequestErrorMeta, cls).__new__(cls, name, bases,
-                                                    namespace)
-
-RequestError = RequestErrorMeta('RequestError', (ValueError, ), {})
+from py3oauth2.exceptions import OAuthException
+from py3oauth2.message import (
+    is_state_required,
+    MessageMeta,
+    Parameter,
+    Request,
+    Response,
+)
 
 
-class AccessDenied(RequestError):
-    kind = Parameter(str, default='access_denied', editable=False)
+class ErrorResponse(Response):
+    error = Parameter(str, required=True)
+    error_descritpion = Parameter(str)
+    error_uri = Parameter(str)
+    state = Parameter(str, required=is_state_required)
+
+    def __init__(self, request, is_redirect):
+        super(ErrorResponse, self).__init__(request)
+        self.redirect = is_redirect
+
+    def is_redirect(self):
+        return self.redirect
+
+    def get_content_type(self):
+        return 'text/json;charset=utf8'
+
+    def get_response_body(self):
+        return self.to_json()
+
+    @classmethod
+    def from_dict(cls, request, is_redirect, D):
+        inst = cls(request, is_redirect)
+        inst._from_dict(D)
+        return inst
 
 
-class UnauthorizedClient(RequestError):
-    kind = Parameter(str, default='unauthorized_client', editable=False)
+class ErrorException(OAuthException):
+
+    def __init__(self, request, is_redirect=False):
+        self.request = request
+        self.is_redirect = is_redirect
+
+    @property
+    def response(self):
+        if isinstance(self.request, Request):
+            state =\
+                hasattr(self.request, 'state') and self.request.state or None
+        else:
+            state = self.request.get('state')
+
+        return self.klass.from_dict(self.request, self.is_redirect, {
+            'state': state,
+        })
 
 
-class ServerError(RequestError):
-    kind = Parameter(str, default='server_error', editable=False)
+def make_error(name, error):
+    return type('{name}Exception'.format(name=name), (ErrorException, ), {
+        'klass': MessageMeta(name, (ErrorResponse, ), {
+            'error': Parameter(str, required=True, default=error,
+                               editable=False),
+        })
+    })
 
-
-class InvalidRequest(RequestError):
-    kind = Parameter(str, default='invalid_request', editable=False)
+AccessDenied = make_error('AccessDenied', 'access_denied')
+UnauthorizedClient = make_error('UnauthorizedClient', 'unauthorized_client')
+ServerError = make_error('ServerError', 'server_error')
+InvalidRequest = make_error('InvalidRequest', 'invalid_request')
+UnsupportedGrantType = make_error('UnsupportedGrantType',
+                                  'unsupported_grant_type')
+UnsupportedResponseType = make_error('UnsupportedResponseType',
+                                     'unsupported_response_type')

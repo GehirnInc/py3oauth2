@@ -26,15 +26,15 @@ class RefreshTokenRequest(Request):
         previous = provider.store.get_access_token_by_refresh_token(
             self.refresh_token)
         if previous is None:
-            raise AccessDenied
+            raise AccessDenied(self)
 
         if not provider.authorize_client(previous.get_client()):
-            raise UnauthorizedClient()
+            raise UnauthorizedClient(self)
 
         if self.scope:
             scope = provider.normalize_scope(self.scope)
             if not previous.get_scope().issuperset(scope):
-                raise AccessDenied
+                raise AccessDenied(self)
         else:
             scope = previous.get_scope()
 

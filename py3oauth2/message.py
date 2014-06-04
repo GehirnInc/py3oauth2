@@ -255,25 +255,8 @@ class AccessTokenResponse(Response):
         return self.to_json()
 
 
-class ErrorResponse(Response):
-    error = Parameter(str, required=True)
-    error_descritpion = Parameter(str)
-    error_uri = Parameter(str)
-    state = Parameter(str, required=is_state_required)
-
-    def is_redirect(self):
-        return False
-
-    def get_content_type(self):
-        return 'text/json;charset=utf8'
-
-    def get_response_body(self):
-        return self.to_json()
-
-
 class Request(Message):
     response = None
-    err_response = ErrorResponse
 
     def answer(self, provider, owner):
         raise NotImplementedError

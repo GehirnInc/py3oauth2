@@ -13,11 +13,15 @@ from py3oauth2 import (
     refreshtokengrant,
     utils,
 )
-from py3oauth2.exceptions import (
+from py3oauth2.errors import (
     AccessDenied,
-    ErrorResponse,
-    ValidationError,
+    ErrorException,
+    InvalidRequest,
+    ServerError,
+    UnsupportedGrantType,
+    UnsupportedResponseType,
 )
+from py3oauth2.exceptions import ValidationError
 from py3oauth2.interfaces import ClientType
 
 
@@ -89,13 +93,12 @@ class AuthorizationProvider:
     def _decode_request(self, registry, key, request_dict, err_kind, state):
         assert isinstance(registry, dict)
         assert isinstance(request_dict, dict)
-        assert isinstance(err_kind, str)
+        assert issubclass(err_kind, ErrorException)
 
         try:
             handler = registry[key]
         except KeyError as why:
-            raise ErrorResponse(
-                self._err_response(request_dict, err_kind, state)) from why
+            raise err_kind(request_dict) from why
 
         request = handler.from_dict(request_dict)
         try:
@@ -103,45 +106,32 @@ class AuthorizationProvider:
             return request
         except BaseException as why:
             if isinstance(why, ValidationError):
-                kind = 'invalid_request'
-            else:
-                kind = 'server_error'
+                raise InvalidRequest(request) from why
 
-            raise ErrorResponse(
-                self._err_response(request, kind, state)) from why
-
-    def _err_response(self, request, err_kind, state):
-        return message.ErrorResponse.from_dict(request, {
-            'error': err_kind,
-            'state': state,
-        })
+            raise ServerError(request) from why
 
     def decode_authorize_request(self, request_dict):
-        err_kind = 'unsupported_response_type'
         state = request_dict.get('state')
 
         response_type = request_dict.get('response_type')
         if not isinstance(response_type, str):
-            raise ErrorResponse(self._err_response(request_dict,
-                                                   err_kind,
-                                                   state))
+            raise UnsupportedResponseType(request_dict)
         response_type = self.normalize_response_type(response_type.split())
 
         return self._decode_request(self.authz_handlers,
                                     response_type,
                                     request_dict,
-                                    err_kind,
+                                    UnsupportedResponseType,
                                     state)
 
     def decode_token_request(self, request_dict):
-        err_kind = 'unsupported_grant_type'
         state = request_dict.get('state')
 
         grant_type = request_dict.get('grant_type')
         return self._decode_request(self.token_handlers,
                                     grant_type,
                                     request_dict,
-                                    err_kind,
+                                    UnsupportedGrantType,
                                     state)
 
     def handle_request(self, request, owner=None):
@@ -151,15 +141,10 @@ class AuthorizationProvider:
 
             return resp
         except BaseException as why:
-            if not isinstance(why, message.RequestError):
-                why = message.ServerError()
+            if isinstance(why, ErrorException):
+                raise
 
-            resp = request.err_response(request)
-            resp.error = why.kind
-            if hasattr(resp, 'state') and request.state:
-                resp.state = request.state
-
-            raise ErrorResponse(resp) from why
+            raise ServerError(request) from why
 
 
 class ResourceProvider:

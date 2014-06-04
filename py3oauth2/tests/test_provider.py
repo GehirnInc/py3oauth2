@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import contextlib
 import uuid
 
-from py3oauth2.exceptions import (
-    ErrorResponse,
+from py3oauth2.errors import (
+    ErrorException,
 )
 from py3oauth2.interfaces import ClientType
 from py3oauth2.tests import (
-    Store,
+    DummyError,
     mock,
+    Store,
     TestBase,
 )
 
@@ -134,7 +134,7 @@ class AuthorizationProviderTest(TestBase):
                 'state': state,
                 'client_id': client.id,
             })
-        except ErrorResponse as why:
+        except ErrorException as why:
             resp = why.response
             self.assertEqual(resp.error, 'unsupported_response_type')
             self.assertEqual(resp.state, state)
@@ -155,74 +155,77 @@ class AuthorizationProviderTest(TestBase):
 
     def test_decode_request_unsupported(self):
         inst = self.make_target(self.store)
-
-        with contextlib.ExitStack() as stack:
-            response = object()
-            err_response =\
-                stack.enter_context(mock.patch.object(inst, '_err_response',
-                                                      return_value=response))
-
-            try:
-                request_dict = dict()
-                inst._decode_request({}, object(), request_dict,
-                                     'somerror', 'statestring')
-            except ErrorResponse as why:
-                err_response.assert_called_once_with(request_dict,
-                                                     'somerror',
-                                                     'statestring')
-                self.assertIs(why.response, response)
-            else:
-                self.fail()
+        try:
+            request_dict = dict()
+            inst._decode_request({}, object(), request_dict,
+                                 DummyError, 'statestring')
+        except DummyError as why:
+            self.assertEqual(why.response.error, 'dummy_error')
+        else:
+            self.fail()
 
     def test_decode_request_validation_error(self):
+        from py3oauth2.errors import InvalidRequest
         from py3oauth2.message import ValidationError
 
         inst = self.make_target(self.store)
-        with contextlib.ExitStack() as stack:
-            response = object()
-            err_response =\
-                stack.enter_context(mock.patch.object(inst, '_err_response',
-                                                      return_value=response))
-            request = mock.Mock()
-            request.validate.side_effect = ValidationError
 
-            handler = mock.Mock()
-            handler.from_dict.return_value = request
+        request = mock.Mock()
+        request.validate.side_effect = ValidationError
 
-            try:
-                inst._decode_request({'key': handler}, 'key', {},
-                                     'somerror', 'statestring')
-            except ErrorResponse as why:
-                err_response.assert_called_once_with(request,
-                                                     'invalid_request',
-                                                     'statestring')
-                self.assertIs(why.response, response)
-            else:
-                self.fail()
+        handler = mock.Mock()
+        handler.from_dict.return_value = request
+
+        with self.assertRaises(InvalidRequest):
+            inst._decode_request({'key': handler}, 'key', {},
+                                 DummyError, 'statestring')
 
     def test_decode_request_server_error(self):
         # NOTES: for example, message parameter's required method
         #        raises exception
+        from py3oauth2.errors import ServerError
 
         inst = self.make_target(self.store)
-        with contextlib.ExitStack() as stack:
-            response = object()
-            err_response =\
-                stack.enter_context(mock.patch.object(inst, '_err_response',
-                                                      return_value=response))
-            request = mock.Mock()
-            request.validate.side_effect = Exception()
+        request = mock.Mock()
+        request.validate.side_effect = Exception()
 
-            handler = mock.Mock()
-            handler.from_dict.return_value = request
+        handler = mock.Mock()
+        handler.from_dict.return_value = request
 
-            try:
-                inst._decode_request({'key': handler}, 'key', {},
-                                     'somerror', 'statestring')
-            except ErrorResponse as why:
-                err_response.assert_called_once_with(request,
-                                                     'server_error',
-                                                     'statestring')
-                self.assertIs(why.response, response)
-            else:
-                self.fail()
+        with self.assertRaises(ServerError):
+            inst._decode_request({'key': handler}, 'key', {},
+                                 DummyError, 'statestring')
+
+    def test_handle_request(self):
+        request = mock.Mock()
+        owner = object()
+
+        inst = self.make_target(self.store)
+        resp = inst.handle_request(request, owner)
+
+        request.answer.assert_called_once_with(inst, owner)
+        self.assertEqual(request.answer.return_value.validate.call_count, 1)
+
+        self.assertIs(resp, request.answer.return_value)
+
+    def test_handle_request_error_exception(self):
+        request = mock.Mock()
+        request.answer.side_effect = DummyError(request)
+        owner = object()
+
+        inst = self.make_target(self.store)
+
+        with self.assertRaises(DummyError):
+            inst.handle_request(request, owner)
+
+    def test_handle_request_server_error(self):
+        from py3oauth2.errors import ServerError
+
+        request = mock.Mock()
+        request.answer.side_effect = BaseException()
+        owner = object()
+
+        inst = self.make_target(self.store)
+
+        with self.assertRaises(ServerError):
+            inst.handle_request(request, owner)
