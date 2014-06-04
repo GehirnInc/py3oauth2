@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import message
+from .interfaces import IClient
 
 
 def is_state_required(self):
@@ -42,19 +43,18 @@ class AuthorizationRequest(message.Request):
 
     def answer(self, provider, owner):
         client = provider.store.get_client(self.client_id)
-        if client is None or not provider.authorize_client(client):
+        if not isinstance(client, IClient)\
+                or not provider.authorize_client(client):
             raise message.UnauthorizedClient
 
         redirect_uri = self.redirect_uri or client.get_redirect_uri()
         if not redirect_uri:
-            raise message.InvalidRequet()
+            raise message.InvalidRequest()
         elif not provider.validate_redirect_uri(client, redirect_uri):
             raise message.UnauthorizedClient()
 
-        code = provider.store.persist_authorization_code(
-            client, owner, provider.generate_authorization_code(),
-            self.scope)
-
+        code = provider.store.issue_authorization_code(
+            client, owner, provider.normalize_scope(self.scope))
         return self.response.from_dict(self, {
             'code': code.get_code(),
             'state': self.state,
@@ -83,19 +83,18 @@ class AccessTokenRequest(message.Request):
             raise message.AccessDenied()
 
         client = provider.store.get_client(self.client_id)
-        if client is None or not provider.authorize_client(client)\
-                or client.get_id() != authcode.get_client().get_id():
+        if not isinstance(client, IClient)\
+                or not provider.authorize_client(client)\
+                or client != authcode.get_client():
             raise message.UnauthorizedClient
 
-        token = provider.store.persist_access_token(
-            authcode.get_client(), authcode.get_owner(),
-            provider.generate_access_token(), authcode.get_scope(),
-            provider.generate_refresh_token())
-
+        token = provider.store.issue_access_token(authcode.get_client(),
+                                                  authcode.get_owner(),
+                                                  authcode.get_scope())
         return self.response.from_dict(self, {
             'access_token': token.get_token(),
             'token_type': token.get_type(),
             'expires_in': token.get_expires_in(),
             'refresh_token': token.get_refresh_token(),
-            'scope': token.get_scope(),
+            'scope': ' '.join(token.get_scope()),
         })

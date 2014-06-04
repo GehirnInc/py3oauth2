@@ -2,12 +2,11 @@
 
 import contextlib
 import json
-try:
-    from unittest import mock
-except ImportError:
-    import mock
 
-from . import TestBase
+from . import (
+    mock,
+    TestBase,
+)
 
 
 class TestAuthorizationRequest(TestBase):
@@ -56,6 +55,26 @@ class TestAuthorizationRequest(TestBase):
 
             req.answer(provider, self.owner)
 
+    def test_answer_invalid_request(self):
+        from ..message import InvalidRequest
+        from ..provider import AuthorizationProvider
+
+        provider = AuthorizationProvider(self.store)
+        client = self.make_client()
+        req = self.target.from_dict({
+            'response_type': 'code',
+            'client_id': client.id,
+        })
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(mock.patch.object(provider, 'authorize_client',
+                                                  return_value=True))
+            stack.enter_context(mock.patch.object(client, 'get_redirect_uri',
+                                                  return_value=None))
+            stack.enter_context(self.assertRaises(InvalidRequest))
+
+            req.answer(provider, self.owner)
+
     def test_answer_unauthorized_client_redirect_uri_notmatched(self):
         from ..message import UnauthorizedClient
         from ..provider import AuthorizationProvider
@@ -98,7 +117,6 @@ class TestAuthorizationRequest(TestBase):
         self.assertEqual(req.state, resp.state)
         code = self.store.get_authorization_code(resp.code)
         self.assertIsNotNone(code)
-        self.assertEqual(len(code.get_code()), 40)
         self.assertTrue(resp.is_redirect())
 
 
@@ -218,8 +236,6 @@ class TestAccessTokenRequest(TestBase):
         self.assertIsInstance(resp, req.response)
         token = self.store.get_access_token(resp.access_token)
         self.assertIsNotNone(token)
-        self.assertEqual(len(token.get_token()),
-                         provider.store.get_access_token_length())
         self.assertFalse(resp.is_redirect())
         self.assertEqual(resp.get_content_type(), 'text/json;charset=utf8')
         self.assertEqual(

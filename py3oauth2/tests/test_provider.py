@@ -7,8 +7,6 @@ from ..exceptions import (
 )
 from ..interfaces import ClientType
 from . import (
-    BlindAuthorizationProvider,
-    DummyResourceProvider,
     Store,
     TestBase,
 )
@@ -111,28 +109,6 @@ class AuthorizationProviderTest(TestBase):
             client, 'https://example.com/cb?bar=baz'
         ))
 
-    def test_generate_authorization_code(self):
-        inst = self.make_target(self.store)
-        code = inst.generate_authorization_code()
-        self.assertEqual(len(code),
-                         self.store.get_authorization_code_length())
-
-        self.assertRegex(code, r'^[a-zA-Z0-9]+$')
-
-    def test_generate_access_token(self):
-        inst = self.make_target(self.store)
-        token = inst.generate_access_token()
-        self.assertEqual(len(token),
-                         self.store.get_access_token_length())
-        self.assertRegex(token, r'^[a-zA-Z0-9]+$')
-
-    def test_generate_refresh_token(self):
-        inst = self.make_target(self.store)
-        token = inst.generate_refresh_token()
-        self.assertEqual(len(token),
-                         self.store.get_refresh_token_length())
-        self.assertRegex(token, r'^[a-zA-Z0-9]+$')
-
     def test_decode_authorize_request(self):
         from .. import authorizationcodegrant
         client = self.make_client()
@@ -222,7 +198,7 @@ class AuthorizationProviderTest(TestBase):
         ret = inst.decode_token_request({
             'grant_type': 'authorization_code',
             'client_id': client.id,
-            'code': inst.generate_authorization_code(),
+            'code': 'authorizationcode',
         })
 
         self.assertIsInstance(ret, authorizationcodegrant.AccessTokenRequest)

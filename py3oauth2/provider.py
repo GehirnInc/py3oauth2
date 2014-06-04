@@ -39,6 +39,13 @@ class AuthorizationProvider:
         self.store = store
 
     @staticmethod
+    def normalize_scope(scope):
+        if isinstance(scope, str):
+            return set(scope.split())
+
+        return set()
+
+    @staticmethod
     def normalize_response_type(response_type):
         assert isinstance(response_type, collections.Iterable)
 
@@ -78,24 +85,6 @@ class AuthorizationProvider:
             redirect_uri = authorized_url.split('?', 1)[0]
 
         return authorized_url == redirect_uri
-
-    def _generate_random_string(self, length):
-        return utils.generate_random_string(
-            length,
-            utils.RSFlag.LOWER | utils.RSFlag.UPPER | utils.RSFlag.DIGITS
-        )
-
-    def generate_authorization_code(self):
-        return self._generate_random_string(
-            self.store.get_authorization_code_length())
-
-    def generate_access_token(self):
-        return self._generate_random_string(
-            self.store.get_access_token_length())
-
-    def generate_refresh_token(self):
-        return self._generate_random_string(
-            self.store.get_refresh_token_length())
 
     def _decode_request(self, registry, key, request_dict, err_kind, state):
         assert isinstance(registry, dict)
@@ -155,7 +144,7 @@ class AuthorizationProvider:
         return self._decode_request(self.token_handlers,
                                     grant_type,
                                     request_dict,
-                                    'unsupported_grant_type',
+                                    err_kind,
                                     state)
 
     def handle_request(self, request, owner=None):

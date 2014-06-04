@@ -1,42 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import enum
 import itertools
-import string
-import random
 from urllib.parse import (
     urlparse,
     urlunparse,
 )
 
 
-__all__ = ['RSFlag', 'generate_random_string', 'normalize_url']
+__all__ = ['normalize_url']
 
 URL_UNRESERVED = {hex(i)[2:].upper(): chr(i) for i in itertools.chain(
     range(65, 91), range(97, 123), range(48, 58), (45, 46, 95, 126)
 )}
-
-
-class RSFlag(enum.IntEnum):
-    LOWER = 1
-    UPPER = 1 << 1
-    DIGITS = 1 << 2
-
-
-def generate_random_string(length, flag):
-    kinds = []
-
-    if flag & RSFlag.LOWER > 0:
-        kinds.append(string.ascii_lowercase)
-
-    if flag & RSFlag.UPPER > 0:
-        kinds.append(string.ascii_uppercase)
-
-    if flag & RSFlag.DIGITS:
-        kinds.append(string.digits)
-
-    pool = ''.join(kinds)
-    return ''.join(random.choice(pool) for _ in range(length))
 
 
 def normalize_url(url):

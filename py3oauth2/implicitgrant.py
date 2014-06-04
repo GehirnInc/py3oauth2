@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import message
+from .interfaces import IClient
 
 __all__ = ['Response', 'ErrorResponse', 'Request']
 
@@ -41,26 +42,27 @@ class Request(message.Request):
 
     def answer(self, provider, owner):
         client = provider.store.get_client(self.client_id)
-        if client is None or not provider.authorize_client(client):
+        if not isinstance(client, IClient)\
+                or not provider.authorize_client(client):
             raise message.UnauthorizedClient
 
         redirect_uri = self.redirect_uri if self.redirect_uri\
             else client.get_redirect_uri()
         if not redirect_uri:
-            raise message.InvalidRequet()
+            raise message.InvalidRequest()
         elif not provider.validate_redirect_uri(client, redirect_uri):
             raise message.UnauthorizedClient()
 
-        token = provider.store.persist_access_token(
-            client, owner, provider.generate_access_token(),
-            self.scope, None)
+        token = provider.store.issue_access_token(
+            client, owner, provider.normalize_scope(self.scope))
 
         response = self.response.from_dict(self, {
             'access_token': token.get_token(),
             'token_type': token.get_type(),
             'expires_in': token.get_expires_in(),
-            'scope': token.get_scope(),
+            'scope': ' '.join(token.get_scope()),
             'state': self.state,
         })
         response.redirect_uri = redirect_uri
+
         return response
