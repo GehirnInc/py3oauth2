@@ -2,6 +2,7 @@
 
 from py3oauth2.errors import (
     AccessDenied,
+    InvalidScope,
     UnauthorizedClient,
 )
 from py3oauth2.message import (
@@ -34,7 +35,7 @@ class RefreshTokenRequest(Request):
         if self.scope:
             scope = provider.normalize_scope(self.scope)
             if not previous.get_scope().issuperset(scope):
-                raise AccessDenied(self)
+                raise InvalidScope(self)
         else:
             scope = previous.get_scope()
 
