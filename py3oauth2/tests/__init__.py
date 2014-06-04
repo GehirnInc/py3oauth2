@@ -14,9 +14,9 @@ from examples.models import (
     Store,
 )
 
-from ..interfaces import ClientType
-from .. import message
-from ..provider import (
+from py3oauth2 import message
+from py3oauth2.interfaces import ClientType
+from py3oauth2.provider import (
     AuthorizationProvider,
     ResourceProvider,
 )

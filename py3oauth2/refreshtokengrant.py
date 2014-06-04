@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .message import (
+from py3oauth2.message import (
     AccessDenied,
     AccessTokenResponse,
     ErrorResponse,

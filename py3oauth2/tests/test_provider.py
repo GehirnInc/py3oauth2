@@ -2,11 +2,11 @@
 
 import uuid
 
-from ..exceptions import (
+from py3oauth2.exceptions import (
     ErrorResponse,
 )
-from ..interfaces import ClientType
-from . import (
+from py3oauth2.interfaces import ClientType
+from py3oauth2.tests import (
     Store,
     TestBase,
 )
@@ -19,7 +19,7 @@ class AuthorizationProviderTest(TestBase):
 
     @property
     def target(self):
-        from ..provider import AuthorizationProvider
+        from py3oauth2.provider import AuthorizationProvider
         return AuthorizationProvider
 
     def make_target(self, store):
@@ -30,7 +30,7 @@ class AuthorizationProviderTest(TestBase):
         self.assertIs(inst.store, self.store)
 
     def test_add_authorization_handler(self):
-        from ..message import Request
+        from py3oauth2.message import Request
         inst = self.make_target(self.store)
         inst.add_authorization_handler(
             ('id_token', 'code', 'token'),
@@ -42,7 +42,7 @@ class AuthorizationProviderTest(TestBase):
             Request)
 
     def test_add_token_handler(self):
-        from ..message import Request
+        from py3oauth2.message import Request
         inst = self.make_target(self.store)
         inst.add_token_handler('refresh_token', Request)
 
@@ -110,7 +110,7 @@ class AuthorizationProviderTest(TestBase):
         ))
 
     def test_decode_authorize_request(self):
-        from .. import authorizationcodegrant
+        from py3oauth2 import authorizationcodegrant
         client = self.make_client()
 
         inst = self.make_target(self.store)
@@ -191,7 +191,7 @@ class AuthorizationProviderTest(TestBase):
             self.fail()
 
     def test_decode_token_request(self):
-        from .. import authorizationcodegrant
+        from py3oauth2 import authorizationcodegrant
         client = self.make_client()
 
         inst = self.make_target(self.store)

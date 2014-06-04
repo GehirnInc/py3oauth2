@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from . import (
+from py3oauth2.tests import (
     Request,
     Response,
 )
@@ -13,21 +13,21 @@ class TestParameter(unittest.TestCase):
 
     @property
     def target_class(self):
-        from ..message import Parameter
+        from py3oauth2.message import Parameter
         return Parameter
 
     def test_new_atom(self):
-        from ..message import Constant
+        from py3oauth2.message import Constant
         inst = self.target_class(str, editable=False)
         self.assertIsInstance(inst.new('name'), Constant)
 
     def test_new_value(self):
-        from ..message import Variable
+        from py3oauth2.message import Variable
         inst = self.target_class(str)
         self.assertIsInstance(inst.new('name'), Variable)
 
     def test_validate(self):
-        from ..exceptions import ValidationError
+        from py3oauth2.exceptions import ValidationError
         inst = self.target_class(str, required=True)
 
         self.assertTrue(inst.validate(None, 'value', 'value'))
@@ -43,7 +43,7 @@ class TestParameter(unittest.TestCase):
             inst.validate(None, 'value', 123, required=False)
 
     def test_validate_required_func(self):
-        from ..exceptions import ValidationError
+        from py3oauth2.exceptions import ValidationError
         inst = self.target_class(
             str, required=lambda owner: hasattr(owner, 'name'))
 
@@ -58,7 +58,7 @@ class TestParameter(unittest.TestCase):
 class TestVariable(unittest.TestCase):
 
     def setUp(self):
-        from ..message import (
+        from py3oauth2.message import (
             Message,
             MessageMeta,
             Parameter,
@@ -82,7 +82,7 @@ class TestVariable(unittest.TestCase):
         self.assertEqual(inst.foo, 'value')
         self.assertEqual(inst.bar, 'value')
 
-        from ..exceptions import ValidationError
+        from py3oauth2.exceptions import ValidationError
         inst.foo = 123
         with self.assertRaises(ValidationError):
             inst.validate()
@@ -97,7 +97,7 @@ class TestVariable(unittest.TestCase):
 class TestConstant(unittest.TestCase):
 
     def setUp(self):
-        from ..message import (
+        from py3oauth2.message import (
             Message,
             Parameter,
         )
@@ -112,7 +112,7 @@ class TestConstant(unittest.TestCase):
         inst = self.msg()
         self.assertEqual(inst.foo, 'foo')
 
-        from ..exceptions import ValidationError
+        from py3oauth2.exceptions import ValidationError
         with self.assertRaises(ValidationError):
             inst.foo = 'hoge'
 
@@ -123,7 +123,7 @@ class TestConstant(unittest.TestCase):
 class TestMessageMeta(unittest.TestCase):
 
     def test_it(self):
-        from ..message import (
+        from py3oauth2.message import (
             Constant,
             Parameter,
             MessageMeta,
@@ -144,7 +144,7 @@ class TestMessageMeta(unittest.TestCase):
 class TestMessage(unittest.TestCase):
 
     def setUp(self):
-        from ..message import (
+        from py3oauth2.message import (
             Message,
             Parameter,
         )
@@ -170,7 +170,7 @@ class TestMessage(unittest.TestCase):
         self.assertIsNone(inst.foo)
         self.assertEqual(inst['bar'], 'value')
 
-        from ..exceptions import ValidationError
+        from py3oauth2.exceptions import ValidationError
         with self.assertRaises(ValidationError):
             inst = self.msg.from_dict({
                 'foo': 'value',
@@ -181,11 +181,11 @@ class TestRequestErrorMeta(unittest.TestCase):
 
     @property
     def target_class(self):
-        from ..message import RequestErrorMeta
+        from py3oauth2.message import RequestErrorMeta
         return RequestErrorMeta
 
     def test_it(self):
-        from ..message import (
+        from py3oauth2.message import (
             Parameter,
             RequestError,
         )

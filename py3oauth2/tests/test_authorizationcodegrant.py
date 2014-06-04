@@ -3,7 +3,7 @@
 import contextlib
 import json
 
-from . import (
+from py3oauth2.tests import (
     mock,
     TestBase,
 )
@@ -16,12 +16,12 @@ class TestAuthorizationRequest(TestBase):
 
     @property
     def target(self):
-        from ..authorizationcodegrant import AuthorizationRequest
+        from py3oauth2.authorizationcodegrant import AuthorizationRequest
         return AuthorizationRequest
 
     def test_answer_unauthorized_client(self):
-        from ..message import UnauthorizedClient
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.provider import AuthorizationProvider
 
         client = self.make_client()
         req = self.target.from_dict({
@@ -38,8 +38,8 @@ class TestAuthorizationRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client_unregistered(self):
-        from ..message import UnauthorizedClient
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
 
@@ -56,8 +56,8 @@ class TestAuthorizationRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_invalid_request(self):
-        from ..message import InvalidRequest
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import InvalidRequest
+        from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
         client = self.make_client()
@@ -76,8 +76,8 @@ class TestAuthorizationRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client_redirect_uri_notmatched(self):
-        from ..message import UnauthorizedClient
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.provider import AuthorizationProvider
 
         client = self.make_client(redirect_uri='https://example.com/cb')
         self.store.persist_client(client)
@@ -97,7 +97,7 @@ class TestAuthorizationRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer(self):
-        from ..provider import AuthorizationProvider
+        from py3oauth2.provider import AuthorizationProvider
         provider = AuthorizationProvider(self.store)
         client = self.make_client()
 
@@ -127,12 +127,12 @@ class TestAccessTokenRequest(TestBase):
 
     @property
     def target(self):
-        from ..authorizationcodegrant import AccessTokenRequest
+        from py3oauth2.authorizationcodegrant import AccessTokenRequest
         return AccessTokenRequest
 
     def test_answer_access_denied_unknown_code(self):
-        from ..message import AccessDenied
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import AccessDenied
+        from py3oauth2.provider import AuthorizationProvider
 
         client = self.make_client()
         req = self.target.from_dict({
@@ -150,8 +150,8 @@ class TestAccessTokenRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_access_denied_used_code(self):
-        from ..message import AccessDenied
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import AccessDenied
+        from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
 
@@ -174,8 +174,8 @@ class TestAccessTokenRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client_unregistered(self):
-        from ..message import UnauthorizedClient
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
         authcode = self.make_authcode(self.make_client(), self.make_owner())
@@ -194,8 +194,8 @@ class TestAccessTokenRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client(self):
-        from ..message import UnauthorizedClient
-        from ..provider import AuthorizationProvider
+        from py3oauth2.message import UnauthorizedClient
+        from py3oauth2.provider import AuthorizationProvider
 
         client = self.make_client()
         authcode = self.make_authcode(client, self.make_owner())
@@ -215,7 +215,7 @@ class TestAccessTokenRequest(TestBase):
             req.answer(provider, self.owner)
 
     def test_answer(self):
-        from ..provider import AuthorizationProvider
+        from py3oauth2.provider import AuthorizationProvider
 
         client = self.make_client()
         owner = self.make_owner()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from . import message
-from .interfaces import IClient
+from py3oauth2 import message
+from py3oauth2.interfaces import IClient
 
 __all__ = ['Response', 'ErrorResponse', 'Request']
 

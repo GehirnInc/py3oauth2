@@ -4,7 +4,7 @@ from nose.tools import (
     eq_,
     raises,
 )
-from ..utils import (
+from py3oauth2.utils import (
     normalize_netloc,
     normalize_path,
     normalize_query,

@@ -6,19 +6,19 @@ from datetime import (
     timedelta,
 )
 
-from . import (
+from py3oauth2 import (
     authorizationcodegrant,
     implicitgrant,
     message,
     refreshtokengrant,
     utils,
 )
-from .exceptions import (
+from py3oauth2.exceptions import (
     AccessDenied,
     ErrorResponse,
     ValidationError,
 )
-from .interfaces import ClientType
+from py3oauth2.interfaces import ClientType
 
 
 __all__ = ['AuthorizationProvider', 'ResourceProvider']

@@ -8,7 +8,7 @@ from urllib.parse import (
     urlunparse,
 )
 
-from .exceptions import ValidationError
+from py3oauth2.exceptions import ValidationError
 
 
 class Parameter:
