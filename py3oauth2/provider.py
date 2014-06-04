@@ -104,7 +104,7 @@ class AuthorizationProvider:
         except BaseException as why:
             if isinstance(why, ValidationError):
                 why = message.InvalidRequest()
-            elif not isinstance(why, message.RequestError):
+            else:
                 why = message.ServerError()
 
             raise ErrorResponse(
