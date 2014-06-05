@@ -38,7 +38,7 @@ class ErrorResponse(Response):
 
 class ErrorException(OAuthException):
 
-    def __init__(self, request, is_redirect=False):
+    def __init__(self, request=None, is_redirect=False):
         self.request = request
         self.is_redirect = is_redirect
 
@@ -47,8 +47,10 @@ class ErrorException(OAuthException):
         if isinstance(self.request, Request):
             state =\
                 hasattr(self.request, 'state') and self.request.state or None
-        else:
+        elif isinstance(self.request, dict):
             state = self.request.get('state')
+        else:
+            raise ValueError()
 
         return self.klass.from_dict(self.request, self.is_redirect, {
             'state': state,

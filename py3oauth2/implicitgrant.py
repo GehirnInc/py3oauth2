@@ -2,6 +2,7 @@
 
 from py3oauth2 import message
 from py3oauth2.errors import (
+    ErrorException,
     InvalidRequest,
     UnauthorizedClient,
 )
@@ -32,28 +33,32 @@ class Request(message.Request):
     state = message.Parameter(str, recommended=True)
 
     def answer(self, provider, owner):
-        client = provider.store.get_client(self.client_id)
-        if not isinstance(client, IClient)\
-                or not provider.authorize_client(client):
-            raise UnauthorizedClient(self)
+        try:
+            client = provider.store.get_client(self.client_id)
+            if not isinstance(client, IClient)\
+                    or not provider.authorize_client(client):
+                raise UnauthorizedClient()
 
-        redirect_uri = self.redirect_uri if self.redirect_uri\
-            else client.get_redirect_uri()
-        if not redirect_uri:
-            raise InvalidRequest(self)
-        elif not provider.validate_redirect_uri(client, redirect_uri):
-            raise UnauthorizedClient(self)
+            redirect_uri = self.redirect_uri if self.redirect_uri\
+                else client.get_redirect_uri()
+            if not redirect_uri:
+                raise InvalidRequest()
+            elif not provider.validate_redirect_uri(client, redirect_uri):
+                raise UnauthorizedClient()
 
-        token = provider.store.issue_access_token(
-            client, owner, provider.normalize_scope(self.scope))
+            token = provider.store.issue_access_token(
+                client, owner, provider.normalize_scope(self.scope))
 
-        response = self.response.from_dict(self, {
-            'access_token': token.get_token(),
-            'token_type': token.get_type(),
-            'expires_in': token.get_expires_in(),
-            'scope': ' '.join(token.get_scope()),
-            'state': self.state,
-        })
-        response.redirect_uri = redirect_uri
+            response = self.response.from_dict(self, {
+                'access_token': token.get_token(),
+                'token_type': token.get_type(),
+                'expires_in': token.get_expires_in(),
+                'scope': ' '.join(token.get_scope()),
+                'state': self.state,
+            })
+            response.redirect_uri = redirect_uri
 
-        return response
+            return response
+        except ErrorException as why:
+            why.request = self
+            raise

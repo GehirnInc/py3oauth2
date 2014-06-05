@@ -3,6 +3,7 @@
 from py3oauth2 import message
 from py3oauth2.errors import (
     AccessDenied,
+    ErrorException,
     InvalidRequest,
     UnauthorizedClient,
 )
@@ -35,24 +36,29 @@ class AuthorizationRequest(message.Request):
     state = message.Parameter(str, recommended=True)
 
     def answer(self, provider, owner):
-        client = provider.store.get_client(self.client_id)
-        if not isinstance(client, IClient)\
-                or not provider.authorize_client(client):
-            raise UnauthorizedClient(self, True)
+        try:
+            client = provider.store.get_client(self.client_id)
+            if not isinstance(client, IClient)\
+                    or not provider.authorize_client(client):
+                raise UnauthorizedClient()
 
-        redirect_uri = self.redirect_uri or client.get_redirect_uri()
-        if not redirect_uri:
-            raise InvalidRequest(self, True)
-        elif not provider.validate_redirect_uri(client, redirect_uri):
-            raise UnauthorizedClient(self, True)
+            redirect_uri = self.redirect_uri or client.get_redirect_uri()
+            if not redirect_uri:
+                raise InvalidRequest()
+            elif not provider.validate_redirect_uri(client, redirect_uri):
+                raise UnauthorizedClient()
 
-        code = provider.store.issue_authorization_code(
-            client, owner, provider.normalize_scope(self.scope))
-        return self.response.from_dict(self, {
-            'code': code.get_code(),
-            'state': self.state,
-            'redirect_uri': redirect_uri,
-        })
+            code = provider.store.issue_authorization_code(
+                client, owner, provider.normalize_scope(self.scope))
+            return self.response.from_dict(self, {
+                'code': code.get_code(),
+                'state': self.state,
+                'redirect_uri': redirect_uri,
+            })
+        except ErrorException as why:
+            why.is_redirect = True
+            why.request = self
+            raise
 
 
 class AccessTokenRequest(message.Request):
@@ -66,27 +72,31 @@ class AccessTokenRequest(message.Request):
     client_id = message.Parameter(str, required=True)
 
     def answer(self, provider, owner):
-        authcode = provider.store.get_authorization_code(self.code)
-        if authcode is None or authcode.is_used():
-            # NOTES: If an authorization code is used more than once,
-            # the authorization server MUST deny the request and SHOULD
-            # revoke (when possible) all tokens previously issued
-            # based on that authorization code.
-            raise AccessDenied(self)
+        try:
+            authcode = provider.store.get_authorization_code(self.code)
+            if authcode is None or authcode.is_used():
+                # NOTES: If an authorization code is used more than once,
+                # the authorization server MUST deny the request and SHOULD
+                # revoke (when possible) all tokens previously issued
+                # based on that authorization code.
+                raise AccessDenied()
 
-        client = provider.store.get_client(self.client_id)
-        if not isinstance(client, IClient)\
-                or not provider.authorize_client(client)\
-                or client != authcode.get_client():
-            raise UnauthorizedClient(self)
+            client = provider.store.get_client(self.client_id)
+            if not isinstance(client, IClient)\
+                    or not provider.authorize_client(client)\
+                    or client != authcode.get_client():
+                raise UnauthorizedClient()
 
-        token = provider.store.issue_access_token(authcode.get_client(),
-                                                  authcode.get_owner(),
-                                                  authcode.get_scope())
-        return self.response.from_dict(self, {
-            'access_token': token.get_token(),
-            'token_type': token.get_type(),
-            'expires_in': token.get_expires_in(),
-            'refresh_token': token.get_refresh_token(),
-            'scope': ' '.join(token.get_scope()),
-        })
+            token = provider.store.issue_access_token(authcode.get_client(),
+                                                      authcode.get_owner(),
+                                                      authcode.get_scope())
+            return self.response.from_dict(self, {
+                'access_token': token.get_token(),
+                'token_type': token.get_type(),
+                'expires_in': token.get_expires_in(),
+                'refresh_token': token.get_refresh_token(),
+                'scope': ' '.join(token.get_scope()),
+            })
+        except ErrorException as why:
+            why.request = self
+            raise
