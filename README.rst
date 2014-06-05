@@ -5,7 +5,7 @@ py3oauth2
 -----
 About
 -----
-This is a JSON Web Token library for Python 3 developed at `Gehirn Inc`_.
+This is an OAuth 2.0 provider library for Python 3 developed at `Gehirn Inc`_.
 
 -------
 Install

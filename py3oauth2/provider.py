@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import collections
-from datetime import (
-    datetime,
-    timedelta,
-)
+from datetime import datetime
 
 from py3oauth2 import (
     authorizationcodegrant,
@@ -159,9 +156,7 @@ class ResourceProvider:
         if token.get_type() != token_type:
             return False
 
-        expires_at =\
-            token.get_issued_at() + timedelta(seconds=token.get_expires_in())
-        return datetime.utcnow() <= expires_at
+        return datetime.utcnow() <= token.get_expires_at()
 
     def authorize(self, required_scope):
         assert isinstance(required_scope, set)
@@ -172,8 +167,7 @@ class ResourceProvider:
                     not self.validate_access_token(tokenobj, token_type):
                 raise AccessDenied()
 
-            authorized_scopes = set(tokenobj.get_scope().split())
-            if not required_scope.issubset(authorized_scopes):
+            if not required_scope.issubset(tokenobj.get_scope()):
                 raise AccessDenied()
         except AccessDenied:
             raise

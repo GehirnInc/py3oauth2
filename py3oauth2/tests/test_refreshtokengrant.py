@@ -76,7 +76,7 @@ class TestRefreshTokenRequest(TestBase):
                          token.get_scope())
 
     def test_answer_invalid_scope_1(self):
-        from py3oauth2.errors import AccessDenied
+        from py3oauth2.errors import InvalidScope
 
         provider = BlindAuthorizationProvider(self.store)
 
@@ -85,11 +85,11 @@ class TestRefreshTokenRequest(TestBase):
             'refresh_token': self.access_token.get_refresh_token(),
             'scope': 'view write admin',
         })
-        with self.assertRaises(AccessDenied):
+        with self.assertRaises(InvalidScope):
             req.answer(provider, self.owner)
 
     def test_answer_invalid_scope_2(self):
-        from py3oauth2.errors import AccessDenied
+        from py3oauth2.errors import InvalidScope
 
         access_token = self.store.issue_access_token(self.client,
                                                      self.owner,
@@ -101,5 +101,5 @@ class TestRefreshTokenRequest(TestBase):
             'refresh_token': access_token.get_refresh_token(),
             'scope': 'view',
         })
-        with self.assertRaises(AccessDenied):
+        with self.assertRaises(InvalidScope):
             req.answer(provider, self.owner)

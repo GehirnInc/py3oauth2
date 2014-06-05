@@ -73,3 +73,4 @@ UnsupportedGrantType = make_error('UnsupportedGrantType',
                                   'unsupported_grant_type')
 UnsupportedResponseType = make_error('UnsupportedResponseType',
                                      'unsupported_response_type')
+InvalidScope = make_error('InvalidScope', 'invalid_scope')
