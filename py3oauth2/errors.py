@@ -16,31 +16,18 @@ class ErrorResponse(Response):
     error_uri = Parameter(str)
     state = Parameter(str, required=is_state_required)
 
-    def __init__(self, request, is_redirect):
-        super(ErrorResponse, self).__init__(request)
-        self.redirect = is_redirect
-
-    def is_redirect(self):
-        return self.redirect
-
     def get_content_type(self):
         return 'text/json;charset=utf8'
 
     def get_response_body(self):
         return self.to_json()
 
-    @classmethod
-    def from_dict(cls, request, is_redirect, D):
-        inst = cls(request, is_redirect)
-        inst._from_dict(D)
-        return inst
-
 
 class ErrorException(OAuthException):
 
-    def __init__(self, request=None, is_redirect=False):
+    def __init__(self, request=None, redirect_uri=None):
         self.request = request
-        self.is_redirect = is_redirect
+        self.redirect_uri = redirect_uri
 
     @property
     def response(self):
@@ -52,9 +39,11 @@ class ErrorException(OAuthException):
         else:
             raise ValueError()
 
-        return self.klass.from_dict(self.request, self.is_redirect, {
+        response = self.klass(self.request, self.redirect_uri)
+        response.update({
             'state': state,
         })
+        return response
 
 
 def make_error(name, error):

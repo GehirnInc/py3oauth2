@@ -31,7 +31,8 @@ class TestRefreshTokenRequest(TestBase):
     def test_answer_access_denied(self):
         from py3oauth2.errors import AccessDenied
 
-        req = RefreshTokenRequest.from_dict({
+        req = RefreshTokenRequest()
+        req.update({
             'grant_type': 'refresh_token',
             'refresh_token': 'unknown_refresh_token',
         })
@@ -44,7 +45,8 @@ class TestRefreshTokenRequest(TestBase):
         from py3oauth2.errors import UnauthorizedClient
         from py3oauth2.provider import AuthorizationProvider
 
-        req = RefreshTokenRequest.from_dict({
+        req = RefreshTokenRequest()
+        req.update({
             'grant_type': 'refresh_token',
             'refresh_token': self.access_token.get_refresh_token(),
         })
@@ -57,8 +59,27 @@ class TestRefreshTokenRequest(TestBase):
 
             req.answer(provider, self.owner)
 
+    def test_answer_store_raises_error_exception(self):
+        from py3oauth2.errors import AccessDenied
+        req = RefreshTokenRequest()
+        req.update({
+            'grant_type': 'refresh_token',
+            'refresh_token': self.access_token.get_refresh_token(),
+        })
+
+        self.store.issue_access_token = mock.Mock(side_effect=AccessDenied())
+        provider = BlindAuthorizationProvider(self.store)
+
+        try:
+            req.answer(provider, self.owner)
+        except AccessDenied as why:
+            self.assertIs(why.request, req)
+        else:
+            self.fail()
+
     def test_answer(self):
-        req = RefreshTokenRequest.from_dict({
+        req = RefreshTokenRequest()
+        req.update({
             'grant_type': 'refresh_token',
             'refresh_token': self.access_token.get_refresh_token(),
         })
@@ -80,7 +101,8 @@ class TestRefreshTokenRequest(TestBase):
 
         provider = BlindAuthorizationProvider(self.store)
 
-        req = RefreshTokenRequest.from_dict({
+        req = RefreshTokenRequest()
+        req.update({
             'grant_type': 'refresh_token',
             'refresh_token': self.access_token.get_refresh_token(),
             'scope': 'view write admin',
@@ -96,7 +118,8 @@ class TestRefreshTokenRequest(TestBase):
                                                      {'write'})
         provider = BlindAuthorizationProvider(self.store)
 
-        req = RefreshTokenRequest.from_dict({
+        req = RefreshTokenRequest()
+        req.update({
             'grant_type': 'refresh_token',
             'refresh_token': access_token.get_refresh_token(),
             'scope': 'view',

@@ -97,7 +97,8 @@ class AuthorizationProvider:
         except KeyError as why:
             raise err_kind(request_dict) from why
 
-        request = handler.from_dict(request_dict)
+        request = handler()
+        request.update(request_dict)
         try:
             request.validate()
             return request

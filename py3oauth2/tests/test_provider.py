@@ -168,14 +168,11 @@ class AuthorizationProviderTest(TestBase):
         from py3oauth2.errors import InvalidRequest
         from py3oauth2.message import ValidationError
 
-        inst = self.make_target(self.store)
-
         request = mock.Mock()
         request.validate.side_effect = ValidationError
+        handler = mock.Mock(return_value=request)
 
-        handler = mock.Mock()
-        handler.from_dict.return_value = request
-
+        inst = self.make_target(self.store)
         with self.assertRaises(InvalidRequest):
             inst._decode_request({'key': handler}, 'key', {},
                                  DummyError, 'statestring')
@@ -185,13 +182,11 @@ class AuthorizationProviderTest(TestBase):
         #        raises exception
         from py3oauth2.errors import ServerError
 
-        inst = self.make_target(self.store)
         request = mock.Mock()
         request.validate.side_effect = Exception()
+        handler = mock.Mock(return_value=request)
 
-        handler = mock.Mock()
-        handler.from_dict.return_value = request
-
+        inst = self.make_target(self.store)
         with self.assertRaises(ServerError):
             inst._decode_request({'key': handler}, 'key', {},
                                  DummyError, 'statestring')

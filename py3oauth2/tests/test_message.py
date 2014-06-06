@@ -164,7 +164,8 @@ class TestMessage(unittest.TestCase):
 
         self.assertEqual(json.loads(inst.to_json()), {'bar': 'value'})
 
-        inst = self.msg.from_dict({
+        inst = self.msg()
+        inst.update({
             'bar': 'value',
         })
         self.assertIsNone(inst.foo)
@@ -172,7 +173,8 @@ class TestMessage(unittest.TestCase):
 
         from py3oauth2.exceptions import ValidationError
         with self.assertRaises(ValidationError):
-            inst = self.msg.from_dict({
+            inst = self.msg()
+            inst.update({
                 'foo': 'value',
             })
 
@@ -181,15 +183,16 @@ class TestResponse(unittest.TestCase):
 
     def test_is_redirect(self):
         inst = Response(Request())
-        with self.assertRaises(NotImplementedError):
-            inst.is_redirect()
+        self.assertTrue(inst.is_redirect())
 
     def test_get_redirect_to_code(self):
-        req = Request.from_dict({
+        req = Request()
+        req.update({
             'grant_type': 'test',
             'response_type': 'code',
         })
-        inst = Response.from_dict(req, {
+        inst = Response(req)
+        inst.update({
             'param': 'value',
         })
         inst.redirect_uri = 'http://example.com/cb'
@@ -199,11 +202,13 @@ class TestResponse(unittest.TestCase):
                          'http://example.com/cb?param=value')
 
     def test_get_redirect_to_token(self):
-        req = Request.from_dict({
+        req = Request()
+        req.update({
             'grant_type': 'test',
             'response_type': 'token',
         })
-        inst = Response.from_dict(req, {
+        inst = Response(req)
+        inst.update({
             'param': 'value',
         })
         inst.redirect_uri = 'http://example.com/cb'
@@ -213,12 +218,14 @@ class TestResponse(unittest.TestCase):
                          'http://example.com/cb#param=value')
 
     def test_get_redirect_to_response_mode(self):
-        req = Request.from_dict({
+        req = Request()
+        req.update({
             'grant_type': 'test',
             'response_type': 'code',
             'response_mode': 'fragment',
         })
-        inst = Response.from_dict(req, {
+        inst = Response(req)
+        inst.update({
             'param': 'value',
         })
         inst.redirect_uri = 'http://example.com/cb'
@@ -228,15 +235,19 @@ class TestResponse(unittest.TestCase):
                          'http://example.com/cb#param=value')
 
     def test_get_content_type(self):
-        inst = Response(Request.from_dict({
+        req = Request()
+        req.update({
             'grant_type': 'test',
-        }))
+        })
+        inst = Response(req)
         with self.assertRaises(NotImplementedError):
             inst.get_content_type()
 
     def test_get_response_body(self):
-        inst = Response(Request.from_dict({
+        req = Request()
+        req.update({
             'grant_type': 'test',
-        }))
+        })
+        inst = Response(req)
         with self.assertRaises(NotImplementedError):
             inst.get_response_body()

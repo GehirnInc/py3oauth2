@@ -2,6 +2,7 @@
 
 from py3oauth2.errors import (
     AccessDenied,
+    ErrorException,
     InvalidScope,
     UnauthorizedClient,
 )
@@ -39,15 +40,22 @@ class RefreshTokenRequest(Request):
         else:
             scope = previous.get_scope()
 
-        token = provider.store.issue_access_token(previous.get_client(),
-                                                  previous.get_owner(),
-                                                  scope)
+        try:
+            token = provider.store.issue_access_token(previous.get_client(),
+                                                      previous.get_owner(),
+                                                      scope)
+        except ErrorException as why:
+            why.request = self
+            raise
+
         provider.store.discard_access_token(previous)
 
-        return self.response.from_dict(self, {
+        response = self.response(self)
+        response.update({
             'access_token': token.get_token(),
             'token_type': token.get_type(),
             'expires_in': token.get_expires_in(),
             'refresh_token': token.get_refresh_token(),
             'scope': ' '.join(token.get_scope()),
         })
+        return response

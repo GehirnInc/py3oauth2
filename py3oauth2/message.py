@@ -166,26 +166,24 @@ class Message(dict, metaclass=MessageMeta):
 
         return True
 
-    def _from_dict(self, D):
+    def update(self, D):
         for k, v in D.items():
-            if hasattr(self, k)\
-                    and isinstance(getattr(self.__class__, k), Parameter):
-                param = getattr(self.__class__, k)
-                if param.editable:
+            try:
+                value = getattr(self.__class__, k)
+                if not isinstance(value, Parameter):
+                    self[k] = v
+                    continue
+
+                if value.editable:
                     setattr(self, k, v)
-                elif param.default == v:
+                elif value.default == v:
                     continue
                 else:
-                    raise ValidationError(
-                        '{0!s} must be \'{1!s}\''.format(k, param.default))
-            else:
+                    raise ValidationError('{0!s} must be \'{1!s}\''.format(
+                        k, value.default
+                    ))
+            except (AttributeError, TypeError):
                 self[k] = v
-
-    @classmethod
-    def from_dict(cls, D):
-        inst = cls()
-        inst._from_dict(D)
-        return inst
 
 
 def is_state_required(self):
@@ -194,16 +192,15 @@ def is_state_required(self):
 
 class Response(Message):
 
-    def __init__(self, request):
+    def __init__(self, request, redirect_uri=None):
         self.request = request
+        self.redirect_uri = redirect_uri
 
     def is_redirect(self):
-        raise NotImplementedError
+        return hasattr(self.request, 'response_type')
 
     def get_redirect_to(self):
         assert self.is_redirect()
-        assert hasattr(self.request, 'response_type')\
-            and self.request.response_type
         assert self.redirect_uri
 
         if hasattr(self.request, 'response_mode')\
@@ -230,12 +227,6 @@ class Response(Message):
 
     def get_response_body(self):
         raise NotImplementedError
-
-    @classmethod
-    def from_dict(cls, request, D):
-        inst = cls(request)
-        inst._from_dict(D)
-        return inst
 
 
 class AccessTokenResponse(Response):

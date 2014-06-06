@@ -15,25 +15,13 @@ class ErrorResponseTest(unittest.TestCase):
     def make_target(self, request, is_redirect):
         return self.target(request, is_redirect)
 
-    def test_constructor(self):
-        request = object()
-        is_redirect = object()
-
-        inst = self.make_target(request, is_redirect)
-        self.assertIs(inst.redirect, is_redirect)
-
-    def test_is_redirect(self):
-        is_redirect = object()
-
-        inst = self.make_target(object(), is_redirect)
-        self.assertIs(inst.is_redirect(), is_redirect)
-
     def test_get_content_type(self):
         inst = self.make_target(object(), object())
         self.assertEqual(inst.get_content_type(), 'text/json;charset=utf8')
 
     def test_get_response_body(self):
-        inst = self.target.from_dict(object(), object(), {
+        inst = self.target(object())
+        inst.update({
             'error': 'dummy_error',
         })
         self.assertEqual(inst.get_response_body(), inst.to_json())
@@ -48,26 +36,25 @@ class ErrorExceptionTest(unittest.TestCase):
 
     def test_constructor(self):
         request = object()
-        is_redirect = object()
+        redirect_uri = object()
 
-        inst = self.target(request, is_redirect)
+        inst = self.target(request, redirect_uri)
         self.assertIs(inst.request, request)
-        self.assertIs(inst.is_redirect, is_redirect)
+        self.assertIs(inst.redirect_uri, redirect_uri)
 
     def test_response_parse_fail(self):
         from py3oauth2.message import Request
 
         request = Request()
         request.state = object()
+        redirect_uri = object()
 
-        inst = self.target(request)
+        inst = self.target(request, redirect_uri)
         inst.klass = mock.Mock()
 
         response = inst.response
-        inst.klass.from_dict.assert_called_once_with(
-            request,
-            inst.is_redirect,
-            {
-                'state': request.state,
-            })
-        self.assertIs(response, inst.klass.from_dict.return_value)
+        inst.klass.assert_called_once_with(request, redirect_uri)
+        inst.klass.return_value.update.assert_called_once_with({
+            'state': request.state,
+        })
+        self.assertIs(response, inst.klass.return_value)

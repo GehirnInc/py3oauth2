@@ -20,7 +20,8 @@ class TestRequest(TestBase):
         from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
-        req = self.target.from_dict({
+        req = self.target()
+        req.update({
             'response_type': 'token',
             'client_id': 'unknown_client_id',
         })
@@ -37,7 +38,8 @@ class TestRequest(TestBase):
 
         provider = AuthorizationProvider(self.store)
         client = self.make_client()
-        req = self.target.from_dict({
+        req = self.target()
+        req.update({
             'response_type': 'token',
             'client_id': client.id,
         })
@@ -54,7 +56,8 @@ class TestRequest(TestBase):
 
         provider = AuthorizationProvider(self.store)
         client = self.make_client()
-        req = self.target.from_dict({
+        req = self.target()
+        req.update({
             'response_type': 'token',
             'client_id': client.id,
         })
@@ -74,7 +77,8 @@ class TestRequest(TestBase):
 
         client = self.make_client('https://example.com/cb')
         provider = AuthorizationProvider(self.store)
-        req = self.target.from_dict({
+        req = self.target()
+        req.update({
             'response_type': 'token',
             'client_id': client.id,
             'redirect_uri': 'https://example.com/dummycb',
@@ -86,13 +90,37 @@ class TestRequest(TestBase):
 
             req.answer(provider, self.owner)
 
+    def test_answer_store_raises_error_exception(self):
+        from py3oauth2.errors import AccessDenied
+        from py3oauth2.provider import AuthorizationProvider
+
+        self.store.issue_access_token = mock.Mock(side_effect=AccessDenied)
+        client = self.make_client()
+        provider = AuthorizationProvider(self.store)
+
+        req = self.target()
+        req.update({
+            'response_type': 'token',
+            'client_id': client.id,
+            'state': 'statestring',
+        })
+
+        with mock.patch.object(provider, 'authorize_client',
+                               return_value=True):
+            try:
+                req.answer(provider, self.owner)
+            except AccessDenied as why:
+                self.assertIs(why.request, req)
+                self.assertEqual(why.redirect_uri, client.get_redirect_uri())
+
     def test_answer(self):
         from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
         client = self.make_client()
 
-        req = self.target.from_dict({
+        req = self.target()
+        req.update({
             'response_type': 'token',
             'client_id': client.id,
             'state': 'statestring',
