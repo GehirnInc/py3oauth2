@@ -79,6 +79,8 @@ class AccessTokenRequest(message.Request):
             # based on that authorization code.
             raise AccessDenied()
 
+        authcode.mark_as_used()
+
         client = provider.store.get_client(self.client_id)
         if not isinstance(client, IClient)\
                 or not provider.authorize_client(client)\
