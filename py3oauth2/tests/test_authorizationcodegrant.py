@@ -23,25 +23,6 @@ class TestAuthorizationRequest(TestBase):
         from py3oauth2.errors import UnauthorizedClient
         from py3oauth2.provider import AuthorizationProvider
 
-        client = self.make_client()
-        req = self.target()
-        req.update({
-            'response_type': 'code',
-            'client_id': client.get_id(),
-        })
-
-        provider = AuthorizationProvider(self.store)
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(
-                AuthorizationProvider, 'authorize_client', return_value=False))
-            stack.enter_context(self.assertRaises(UnauthorizedClient))
-
-            req.answer(provider, self.owner)
-
-    def test_answer_unauthorized_client_unregistered(self):
-        from py3oauth2.errors import UnauthorizedClient
-        from py3oauth2.provider import AuthorizationProvider
-
         provider = AuthorizationProvider(self.store)
 
         req = self.target()
@@ -50,11 +31,7 @@ class TestAuthorizationRequest(TestBase):
             'client_id': 'unknown_client_id',
         })
 
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(
-                AuthorizationProvider, 'authorize_client', return_value=True))
-            stack.enter_context(self.assertRaises(UnauthorizedClient))
-
+        with self.assertRaises(UnauthorizedClient):
             req.answer(provider, self.owner)
 
     def test_answer_invalid_request(self):
@@ -70,8 +47,6 @@ class TestAuthorizationRequest(TestBase):
         })
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(provider, 'authorize_client',
-                                                  return_value=True))
             stack.enter_context(mock.patch.object(client, 'get_redirect_uri',
                                                   return_value=None))
             stack.enter_context(self.assertRaises(InvalidRequest))
@@ -94,8 +69,6 @@ class TestAuthorizationRequest(TestBase):
         })
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(
-                AuthorizationProvider, 'authorize_client', return_value=True))
             stack.enter_context(self.assertRaises(UnauthorizedClient))
 
             req.answer(provider, self.owner)
@@ -117,14 +90,12 @@ class TestAuthorizationRequest(TestBase):
             'state': 'state',
         })
 
-        with mock.patch.object(AuthorizationProvider, 'authorize_client',
-                               return_value=True):
-            try:
-                req.answer(provider, self.owner)
-            except AccessDenied as why:
-                self.assertIs(why.request, req)
-            else:
-                self.fail()
+        try:
+            req.answer(provider, self.owner)
+        except AccessDenied as why:
+            self.assertIs(why.request, req)
+        else:
+            self.fail()
 
     def test_answer(self):
         from py3oauth2.provider import AuthorizationProvider
@@ -138,10 +109,7 @@ class TestAuthorizationRequest(TestBase):
             'state': 'state',
         })
 
-        with mock.patch.object(
-                AuthorizationProvider, 'authorize_client', return_value=True):
-            resp = req.answer(provider, self.owner)
-
+        resp = req.answer(provider, self.owner)
         resp.validate()
 
         self.assertIsInstance(resp, req.response)

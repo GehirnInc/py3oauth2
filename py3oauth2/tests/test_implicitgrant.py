@@ -25,11 +25,7 @@ class TestRequest(TestBase):
             'response_type': 'token',
             'client_id': 'unknown_client_id',
         })
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(self.assertRaises(UnauthorizedClient))
-            stack.enter_context(mock.patch.object(
-                provider, 'authorize_client', return_value=True))
-
+        with self.assertRaises(UnauthorizedClient):
             req.answer(provider, self.owner)
 
     def test_answer_unauthorized_client(self):
@@ -37,17 +33,12 @@ class TestRequest(TestBase):
         from py3oauth2.provider import AuthorizationProvider
 
         provider = AuthorizationProvider(self.store)
-        client = self.make_client()
         req = self.target()
         req.update({
             'response_type': 'token',
-            'client_id': client.id,
+            'client_id': 'unknown_client_id',
         })
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(
-                provider, 'authorize_client', return_value=False))
-            stack.enter_context(self.assertRaises(UnauthorizedClient))
-
+        with self.assertRaises(UnauthorizedClient):
             req.answer(provider, self.owner)
 
     def test_answer_invalid_request(self):
@@ -63,8 +54,6 @@ class TestRequest(TestBase):
         })
 
         with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(provider, 'authorize_client',
-                                                  return_value=True))
             stack.enter_context(mock.patch.object(client, 'get_redirect_uri',
                                                   return_value=None))
             stack.enter_context(self.assertRaises(InvalidRequest))
@@ -83,10 +72,7 @@ class TestRequest(TestBase):
             'client_id': client.id,
             'redirect_uri': 'https://example.com/dummycb',
         })
-        with contextlib.ExitStack() as stack:
-            stack.enter_context(mock.patch.object(
-                provider, 'authorize_client', return_value=True))
-            stack.enter_context(self.assertRaises(UnauthorizedClient))
+        with self.assertRaises(UnauthorizedClient):
 
             req.answer(provider, self.owner)
 
@@ -105,13 +91,13 @@ class TestRequest(TestBase):
             'state': 'statestring',
         })
 
-        with mock.patch.object(provider, 'authorize_client',
-                               return_value=True):
-            try:
-                req.answer(provider, self.owner)
-            except AccessDenied as why:
-                self.assertIs(why.request, req)
-                self.assertEqual(why.redirect_uri, client.get_redirect_uri())
+        try:
+            req.answer(provider, self.owner)
+        except AccessDenied as why:
+            self.assertIs(why.request, req)
+            self.assertEqual(why.redirect_uri, client.get_redirect_uri())
+        else:
+            self.fail()
 
     def test_answer(self):
         from py3oauth2.provider import AuthorizationProvider
@@ -125,10 +111,8 @@ class TestRequest(TestBase):
             'client_id': client.id,
             'state': 'statestring',
         })
-        with mock.patch.object(provider, 'authorize_client',
-                               return_value=True):
-            resp = req.answer(provider, self.owner)
 
+        resp = req.answer(provider, self.owner)
         resp.validate()
 
         self.assertIsInstance(resp, req.response)
