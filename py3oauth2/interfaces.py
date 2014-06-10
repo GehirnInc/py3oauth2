@@ -61,10 +61,10 @@ class IAuthorizationCode:
     def get_scope(self):
         raise NotImplementedError
 
-    def is_used(self):
+    def is_active(self):
         raise NotImplementedError
 
-    def mark_as_used(self):
+    def deactivate(self):
         raise NotImplementedError
 
 

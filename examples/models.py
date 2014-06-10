@@ -84,7 +84,8 @@ class AuthorizationCode(IAuthorizationCode):
         self.scope = scope
 
         self.code = base64.b64encode(os.urandom(16)).decode('utf8')
-        self.used = False
+        self.active = True
+        self.expires_at = datetime.utcnow() + timedelta(minutes=10)
 
     def get_client(self):
         return self.client
@@ -98,11 +99,11 @@ class AuthorizationCode(IAuthorizationCode):
     def get_scope(self):
         return self.scope
 
-    def is_used(self):
-        return self.used
+    def is_active(self):
+        return self.active and self.expires_at > datetime.utcnow()
 
-    def mark_as_used(self):
-        self.used = True
+    def deactivate(self):
+        self.active = False
 
 
 class Store(IStore):

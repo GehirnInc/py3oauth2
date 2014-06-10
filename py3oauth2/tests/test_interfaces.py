@@ -39,8 +39,8 @@ class InterfaceTest(unittest.TestCase):
             'get_owner',
             'get_code',
             'get_scope',
-            'is_used',
-            'mark_as_used',
+            'is_active',
+            'deactivate',
         ):
             with self.assertRaises(NotImplementedError):
                 getattr(inst, name)()

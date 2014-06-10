@@ -158,7 +158,7 @@ class TestAccessTokenRequest(TestBase):
         client = self.make_client()
         owner = self.make_owner()
         authcode = self.make_authcode(client, owner)
-        authcode.mark_as_used()
+        authcode.deactivate()
 
         req = self.target()
         req.update({
