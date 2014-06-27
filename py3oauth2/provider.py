@@ -26,18 +26,19 @@ __all__ = ['AuthorizationProvider', 'ResourceProvider']
 
 
 class AuthorizationProvider:
-    authz_handlers = {
-        ('token', ): implicitgrant.Request,
-        ('code', ): authorizationcodegrant.AuthorizationRequest,
-    }
-
-    token_handlers = {
-        'refresh_token': refreshtokengrant.Request,
-        'authorization_code': authorizationcodegrant.AccessTokenRequest,
-    }
 
     def __init__(self, store, **kwargs):
         self.store = store
+
+        self.authz_handlers = {
+            ('token', ): implicitgrant.Request,
+            ('code', ): authorizationcodegrant.AuthorizationRequest,
+        }
+
+        self.token_handlers = {
+            'refresh_token': refreshtokengrant.Request,
+            'authorization_code': authorizationcodegrant.AccessTokenRequest,
+        }
 
     @staticmethod
     def normalize_scope(scope):
@@ -55,20 +56,18 @@ class AuthorizationProvider:
                               if response_type not in response_type[:i])
         return response_type
 
-    @classmethod
-    def add_authorization_handler(cls, response_type, handler):
+    def add_authorization_handler(self, response_type, handler):
         assert isinstance(response_type, tuple)
         assert issubclass(handler, message.Request)
 
-        cls.authz_handlers[cls.normalize_response_type(response_type)]\
+        self.authz_handlers[self.normalize_response_type(response_type)]\
             = handler
 
-    @classmethod
-    def add_token_handler(cls, grant_type, handler):
+    def add_token_handler(self, grant_type, handler):
         assert isinstance(grant_type, str)
         assert issubclass(handler, message.Request)
 
-        cls.token_handlers[grant_type] = handler
+        self.token_handlers[grant_type] = handler
 
     def authorize_client(self, client):
         raise NotImplementedError
