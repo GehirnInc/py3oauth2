@@ -37,12 +37,11 @@ class Request(message.Request):
         if not isinstance(client, IClient):
             raise UnauthorizedClient()
 
-        redirect_uri = self.redirect_uri if self.redirect_uri\
-            else client.get_redirect_uri()
+        redirect_uri = self.redirect_uri or client.get_redirect_uri()
         if not redirect_uri:
-            raise InvalidRequest()
+            raise InvalidRequest(self)
         elif not provider.validate_redirect_uri(client, redirect_uri):
-            raise UnauthorizedClient()
+            raise UnauthorizedClient(self)
 
         try:
             token = provider.store.issue_access_token(

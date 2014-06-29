@@ -41,7 +41,7 @@ class AuthorizationRequest(message.Request):
         if not redirect_uri:
             raise InvalidRequest(self)
         elif not provider.validate_redirect_uri(client, redirect_uri):
-            raise UnauthorizedClient(self, redirect_uri)
+            raise UnauthorizedClient(self)
 
         try:
             code = provider.store.issue_authorization_code(
@@ -54,7 +54,6 @@ class AuthorizationRequest(message.Request):
         response.update({
             'code': code.get_code(),
             'state': self.state,
-            'redirect_uri': redirect_uri,
         })
         return response
 
