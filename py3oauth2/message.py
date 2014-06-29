@@ -197,15 +197,19 @@ class Response(Message):
         self.redirect_uri = redirect_uri
 
     def is_redirect(self):
-        return hasattr(self.request, 'response_type')
+        return hasattr(self.request, 'response_type')\
+            and isinstance(self.redirect_uri, str)
 
     def get_redirect_to(self):
         assert self.is_redirect()
-        assert self.redirect_uri
 
-        if hasattr(self.request, 'response_mode')\
-                and self.request.response_mode:
-            is_fragment = self.request.response_mode == 'fragment'
+        if hasattr(self.request, 'response_mode'):
+            response_mode = self.request.response_mode
+        else:
+            response_mode = self.request.get('response_mode')
+
+        if response_mode:
+            is_fragment = response_mode == 'fragment'
         else:
             response_types = set(self.request.response_type.split())
             is_fragment = 'token' in response_types

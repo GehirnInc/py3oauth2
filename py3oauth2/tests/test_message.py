@@ -182,7 +182,7 @@ class TestMessage(unittest.TestCase):
 class TestResponse(unittest.TestCase):
 
     def test_is_redirect(self):
-        inst = Response(Request())
+        inst = Response(Request(), 'https://example.com/cb')
         self.assertTrue(inst.is_redirect())
 
     def test_get_redirect_to_code(self):
