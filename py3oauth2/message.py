@@ -77,6 +77,12 @@ class Variable:
     def __set__(self, inst, value):
         assert isinstance(inst, Message)
 
+        if not isinstance(value, self.param.type):
+            if isinstance(value, str)\
+                    and self.param.type is int\
+                    and value.isdigit():
+                value = int(value, 10)
+
         inst.__dict__[self.name] = value
 
     def __delete__(self, instance):
