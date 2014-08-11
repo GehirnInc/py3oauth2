@@ -35,7 +35,7 @@ class Request(message.Request):
     def answer(self, provider, owner):
         client = provider.store.get_client(self.client_id)
         if not isinstance(client, IClient):
-            raise UnauthorizedClient()
+            raise UnauthorizedClient(self)
 
         redirect_uri = self.redirect_uri or client.get_redirect_uri()
         if not redirect_uri:

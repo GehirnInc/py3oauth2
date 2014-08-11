@@ -75,7 +75,7 @@ class AccessTokenRequest(message.Request):
             # the authorization server MUST deny the request and SHOULD
             # revoke (when possible) all tokens previously issued
             # based on that authorization code.
-            raise AccessDenied()
+            raise AccessDenied(self)
 
         authcode.deactivate()
 
@@ -83,7 +83,7 @@ class AccessTokenRequest(message.Request):
         if not isinstance(client, IClient)\
                 or not provider.authorize_client(client)\
                 or client != authcode.get_client():
-            raise UnauthorizedClient()
+            raise UnauthorizedClient(self)
 
         try:
             token = provider.store.issue_access_token(authcode.get_client(),
