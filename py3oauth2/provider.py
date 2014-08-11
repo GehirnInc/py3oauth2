@@ -84,7 +84,7 @@ class AuthorizationProvider:
         if '?' in redirect_uri:
             redirect_uri = authorized_url.split('?', 1)[0]
 
-        return authorized_url == redirect_uri
+        return redirect_uri.startswith(authorized_url)
 
     def _decode_request(self, registry, key, request_dict, err_kind, state):
         assert isinstance(registry, dict)
