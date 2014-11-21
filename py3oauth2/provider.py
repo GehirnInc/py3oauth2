@@ -36,7 +36,7 @@ class AuthorizationProvider:
         }
 
         self.token_handlers = {
-            'refresh_token': refreshtokengrant.Request,
+            'refresh_token': refreshtokengrant.RefreshTokenRequest,
             'authorization_code': authorizationcodegrant.AccessTokenRequest,
         }
 
