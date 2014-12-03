@@ -36,7 +36,7 @@ license = _read("LICENSE.rst")
 
 setup(
     name='py3oauth2',
-    version='0.4.6',
+    version='0.4.7',
     test_suite='py3oauth2',
     author='Kohei YOSHIDA',
     author_email='kohei.yoshida@gehirn.co.jp',
