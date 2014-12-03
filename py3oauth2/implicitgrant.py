@@ -2,6 +2,7 @@
 
 from py3oauth2 import message
 from py3oauth2.errors import (
+    AccessDenied,
     ErrorException,
     InvalidRequest,
     UnauthorizedClient,
@@ -42,6 +43,9 @@ class Request(message.Request):
             raise InvalidRequest(self)
         elif not provider.validate_redirect_uri(client, redirect_uri):
             raise UnauthorizedClient(self)
+
+        if owner is None:
+            raise AccessDenied(self, redirect_uri)
 
         try:
             token = provider.store.issue_access_token(

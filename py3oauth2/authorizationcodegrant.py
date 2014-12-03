@@ -43,6 +43,9 @@ class AuthorizationRequest(message.Request):
         elif not provider.validate_redirect_uri(client, redirect_uri):
             raise UnauthorizedClient(self)
 
+        if not owner:
+            raise AccessDenied(self, redirect_uri)
+
         try:
             code = provider.store.issue_authorization_code(
                 client, owner, provider.normalize_scope(self.scope))
